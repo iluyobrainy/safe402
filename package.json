@@ -1,0 +1,38 @@
+{
+  "name": "safe402",
+  "version": "0.1.0",
+  "description": "A spending firewall for agents that pay x402 endpoints.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit"
+  },
+  "keywords": [
+    "x402",
+    "agents",
+    "payments",
+    "agentic-payments",
+    "mcp",
+    "fetch"
+  ],
+  "author": "iluyobrainy",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "@x402/fetch": ">=0.6.0"
+  },
+  "peerDependenciesMeta": {
+    "@x402/fetch": {
+      "optional": true
+    }
+  }
+}
