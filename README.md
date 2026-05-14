@@ -77,8 +77,3 @@ Safe402 intentionally wraps the official x402 ecosystem instead of replacing it.
 Safe402 is not a wallet and not an agent platform.
 
 It is the safety wrapper developers add before an agent spends money.
-
-## Docs
-
-- [SDK usage](./docs/SDK_USAGE.md)
-- [Competitive notes](./docs/COMPETITIVE_NOTES.md)
