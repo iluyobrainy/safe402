@@ -5,14 +5,40 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./audit": {
+      "types": "./dist/audit.d.ts",
+      "import": "./dist/audit.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp.d.ts",
+      "import": "./dist/mcp.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js"
+    }
+  },
+  "bin": {
+    "safe402": "./dist/cli.js"
+  },
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "SECURITY.md",
+    "safe402.config.example.json"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "check": "tsc -p tsconfig.json --noEmit"
+    "check": "tsc -p tsconfig.json --noEmit",
+    "audit": "node dist/cli.js audit",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "prepare": "npm run build"
   },
   "keywords": [
     "x402",
@@ -24,7 +50,20 @@
   ],
   "author": "iluyobrainy",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iluyobrainy/safe402.git"
+  },
+  "bugs": {
+    "url": "https://github.com/iluyobrainy/safe402/issues"
+  },
+  "homepage": "https://github.com/iluyobrainy/safe402#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
   "devDependencies": {
+    "@types/node": "^24.10.1",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {

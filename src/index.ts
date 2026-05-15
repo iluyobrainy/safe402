@@ -3,18 +3,21 @@ export type Safe402DecisionStatus =
   | "denied"
   | "approval_required"
   | "paid"
+  | "failed"
   | "free";
 
 export type Safe402PaymentRequirement = {
   scheme?: string;
   network?: string;
   asset?: string;
+  assetDecimals?: number;
   payTo?: string;
   maxAmountRequired?: string;
   amount?: string;
   resource?: string;
   description?: string;
   mimeType?: string;
+  extra?: Record<string, unknown>;
   [key: string]: unknown;
 };
 
@@ -25,6 +28,9 @@ export type Safe402Policy = {
   blockedDomains?: string[];
   allowedNetworks?: string[];
   allowedAssets?: string[];
+  assetDecimalsByAsset?: Record<string, number>;
+  defaultAssetDecimals?: number;
+  blockSensitiveMetadata?: boolean;
   requireApprovalAboveUsd?: number;
   duplicateWindowMs?: number;
 };
@@ -60,6 +66,11 @@ export type Safe402FetchConfig = {
 };
 
 const DEFAULT_DUPLICATE_WINDOW_MS = 30 * 60 * 1000;
+const KNOWN_ASSET_DECIMALS: Record<string, number> = {
+  usdc: 6,
+  "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": 6,
+  "0x036cbd53842c5426634e7929541ec2318f3dcf7e": 6
+};
 
 export class Safe402Error extends Error {
   decision: Safe402Decision;
@@ -104,15 +115,13 @@ export function createSafe402Fetch(config: Safe402FetchConfig): typeof fetch {
       return firstResponse;
     }
 
-    const requirement = await extractRequirement(firstResponse);
+    const requirement = await extractPaymentRequirement(firstResponse);
     const decision = await evaluatePayment({
       url,
       requirement,
       policy: config.policy ?? {},
       receipts
     });
-
-    await config.onDecision?.(decision);
 
     if (decision.status === "approval_required") {
       const approved = await config.onApprovalRequired?.(decision);
@@ -126,7 +135,31 @@ export function createSafe402Fetch(config: Safe402FetchConfig): typeof fetch {
       throw new Safe402Error(decision);
     }
 
-    const paidResponse = await config.paidFetch(input, init);
+    let paidResponse: Response;
+    try {
+      paidResponse = await config.paidFetch(input, init);
+    } catch (error) {
+      const failedDecision: Safe402Decision = {
+        ...decision,
+        status: "failed",
+        reason: error instanceof Error ? `Paid fetch failed: ${error.message}` : "Paid fetch failed.",
+        timestamp: new Date().toISOString()
+      };
+      await record(receipts, config, failedDecision);
+      throw new Safe402Error(failedDecision);
+    }
+
+    if (paidResponse.status === 402) {
+      const failedDecision: Safe402Decision = {
+        ...decision,
+        status: "failed",
+        reason: "Paid fetch returned another 402; retry fuse stopped to avoid a payment loop.",
+        timestamp: new Date().toISOString()
+      };
+      await record(receipts, config, failedDecision, paidResponse);
+      throw new Safe402Error(failedDecision);
+    }
+
     const paidDecision: Safe402Decision = {
       ...decision,
       status: "paid",
@@ -146,8 +179,9 @@ export async function evaluatePayment(input: {
   receipts: Safe402ReceiptStore;
 }): Promise<Safe402Decision> {
   const { url, requirement, policy, receipts } = input;
-  const amountUsd = parseAmountUsd(requirement);
-  const domain = url.hostname;
+  const parsedAmount = parseRequirementAmount(requirement, policy);
+  const amountUsd = parsedAmount.amountUsd;
+  const domain = url.hostname.toLowerCase();
   const timestamp = new Date().toISOString();
   const duplicateKey = createDuplicateKey(url, requirement);
 
@@ -160,19 +194,32 @@ export async function evaluatePayment(input: {
     timestamp
   };
 
-  if (policy.blockedDomains?.includes(domain)) {
+  if (!parsedAmount.valid) {
+    return { ...baseDecision, status: "denied", reason: parsedAmount.reason };
+  }
+
+  if (amountUsd <= 0) {
+    return { ...baseDecision, status: "denied", reason: "Payment amount must be greater than zero." };
+  }
+
+  if (includesNormalized(policy.blockedDomains, domain)) {
     return { ...baseDecision, status: "denied", reason: `Domain ${domain} is blocked.` };
   }
 
-  if (policy.allowedDomains?.length && !policy.allowedDomains.includes(domain)) {
+  const privacyFindings = findSensitivePaymentMetadata(requirement);
+  if (policy.blockSensitiveMetadata && privacyFindings.length > 0) {
+    return { ...baseDecision, status: "denied", reason: `Sensitive metadata detected: ${privacyFindings.map(finding => finding.type).join(", ")}.` };
+  }
+
+  if (policy.allowedDomains?.length && !includesNormalized(policy.allowedDomains, domain)) {
     return { ...baseDecision, status: "denied", reason: `Domain ${domain} is not in the allowed domain list.` };
   }
 
-  if (policy.allowedNetworks?.length && requirement.network && !policy.allowedNetworks.includes(requirement.network)) {
+  if (policy.allowedNetworks?.length && requirement.network && !includesNormalized(policy.allowedNetworks, requirement.network)) {
     return { ...baseDecision, status: "denied", reason: `Network ${requirement.network} is not allowed.` };
   }
 
-  if (policy.allowedAssets?.length && requirement.asset && !policy.allowedAssets.includes(requirement.asset)) {
+  if (policy.allowedAssets?.length && requirement.asset && !includesNormalized(policy.allowedAssets, requirement.asset)) {
     return { ...baseDecision, status: "denied", reason: `Asset ${requirement.asset} is not allowed.` };
   }
 
@@ -209,7 +256,15 @@ export async function evaluatePayment(input: {
   return { ...baseDecision, status: "approved", reason: "Payment passed Safe402 policy." };
 }
 
-async function extractRequirement(response: Response): Promise<Safe402PaymentRequirement> {
+export async function extractPaymentRequirement(response: Response): Promise<Safe402PaymentRequirement> {
+  const headerRequirement = parsePaymentRequirementHeader(
+    response.headers.get("PAYMENT-REQUIRED") ?? response.headers.get("X-PAYMENT-REQUIRED")
+  );
+
+  if (headerRequirement) {
+    return headerRequirement;
+  }
+
   const payload = await response.clone().json().catch(() => undefined) as unknown;
 
   if (isRecord(payload)) {
@@ -222,10 +277,88 @@ async function extractRequirement(response: Response): Promise<Safe402PaymentReq
   return {};
 }
 
-function parseAmountUsd(requirement: Safe402PaymentRequirement): number {
-  const value = requirement.maxAmountRequired ?? requirement.amount ?? "0";
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
+export type Safe402ParsedAmount = {
+  valid: boolean;
+  amountUsd: number;
+  raw: string | undefined;
+  reason: string;
+};
+
+export function parseRequirementAmount(
+  requirement: Safe402PaymentRequirement,
+  policy: Safe402Policy = {}
+): Safe402ParsedAmount {
+  const value = requirement.maxAmountRequired ?? requirement.amount;
+
+  if (value === undefined || value === null) {
+    return { valid: false, amountUsd: 0, raw: undefined, reason: "Payment amount is missing." };
+  }
+
+  const raw = String(value).trim();
+
+  if (!raw) {
+    return { valid: false, amountUsd: 0, raw: undefined, reason: "Payment amount is missing." };
+  }
+
+  if (!/^\d+(\.\d+)?$/.test(raw)) {
+    return { valid: false, amountUsd: 0, raw, reason: `Payment amount ${raw} is invalid.` };
+  }
+
+  const decimals = resolveAssetDecimals(requirement, policy);
+  const parsed = Number(raw);
+
+  if (!Number.isFinite(parsed)) {
+    return { valid: false, amountUsd: 0, raw, reason: `Payment amount ${raw} is invalid.` };
+  }
+
+  if (!raw.includes(".") && decimals !== undefined) {
+    return {
+      valid: true,
+      amountUsd: parsed / 10 ** decimals,
+      raw,
+      reason: `Parsed atomic amount with ${decimals} decimals.`
+    };
+  }
+
+  return { valid: true, amountUsd: parsed, raw, reason: "Parsed decimal amount." };
+}
+
+export type Safe402PrivacyFinding = {
+  field: string;
+  type: "email" | "phone" | "secret" | "sensitive_query";
+};
+
+export function findSensitivePaymentMetadata(requirement: Safe402PaymentRequirement): Safe402PrivacyFinding[] {
+  const findings: Safe402PrivacyFinding[] = [];
+  const fields = {
+    resource: requirement.resource,
+    description: requirement.description,
+    mimeType: requirement.mimeType
+  };
+
+  for (const [field, value] of Object.entries(fields)) {
+    if (typeof value !== "string") {
+      continue;
+    }
+
+    if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(value)) {
+      findings.push({ field, type: "email" });
+    }
+
+    if (/\+?\d[\d\s().-]{8,}\d/.test(value)) {
+      findings.push({ field, type: "phone" });
+    }
+
+    if (/(sk-[A-Za-z0-9_-]{12,}|ghp_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|bearer\s+[A-Za-z0-9._-]{12,})/i.test(value)) {
+      findings.push({ field, type: "secret" });
+    }
+
+    if (/[?&](api[_-]?key|access[_-]?token|auth[_-]?token|secret|password)=/i.test(value)) {
+      findings.push({ field, type: "sensitive_query" });
+    }
+  }
+
+  return findings;
 }
 
 function createDuplicateKey(url: URL, requirement: Safe402PaymentRequirement): string {
@@ -237,6 +370,67 @@ function createDuplicateKey(url: URL, requirement: Safe402PaymentRequirement): s
     requirement.payTo ?? "",
     requirement.maxAmountRequired ?? requirement.amount ?? ""
   ].join("|");
+}
+
+function parsePaymentRequirementHeader(header: string | null): Safe402PaymentRequirement | undefined {
+  if (!header) {
+    return undefined;
+  }
+
+  const decoded = decodeBase64Json(header) ?? parseJson(header);
+
+  if (!isRecord(decoded)) {
+    return undefined;
+  }
+
+  const accepts = decoded.accepts;
+  if (Array.isArray(accepts) && accepts.length > 0 && isRecord(accepts[0])) {
+    return accepts[0] as Safe402PaymentRequirement;
+  }
+
+  return decoded as Safe402PaymentRequirement;
+}
+
+function decodeBase64Json(value: string): unknown {
+  try {
+    return parseJson(globalThis.atob(value));
+  } catch {
+    return undefined;
+  }
+}
+
+function parseJson(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveAssetDecimals(requirement: Safe402PaymentRequirement, policy: Safe402Policy): number | undefined {
+  const asset = requirement.asset?.toLowerCase();
+
+  if (requirement.asset && policy.assetDecimalsByAsset?.[requirement.asset] !== undefined) {
+    return policy.assetDecimalsByAsset[requirement.asset];
+  }
+
+  if (asset && policy.assetDecimalsByAsset?.[asset] !== undefined) {
+    return policy.assetDecimalsByAsset[asset];
+  }
+
+  if (typeof requirement.assetDecimals === "number") {
+    return requirement.assetDecimals;
+  }
+
+  if (isRecord(requirement.extra) && typeof requirement.extra.decimals === "number") {
+    return requirement.extra.decimals;
+  }
+
+  if (asset && KNOWN_ASSET_DECIMALS[asset] !== undefined) {
+    return KNOWN_ASSET_DECIMALS[asset];
+  }
+
+  return policy.defaultAssetDecimals;
 }
 
 async function record(
@@ -278,4 +472,8 @@ function isToday(timestamp: string): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function includesNormalized(values: string[] | undefined, value: string): boolean {
+  return values?.some(item => item.toLowerCase() === value.toLowerCase()) ?? false;
 }

@@ -1,0 +1,28 @@
+{
+  "policy": {
+    "maxPaymentUsd": 0.1,
+    "dailyBudgetUsd": 5,
+    "allowedDomains": ["api.example.com"],
+    "allowedNetworks": ["base", "base-sepolia"],
+    "allowedAssets": ["USDC"],
+    "blockSensitiveMetadata": true,
+    "requireApprovalAboveUsd": 1,
+    "duplicateWindowMs": 1800000
+  },
+  "endpoints": [],
+  "cases": [
+    {
+      "name": "example endpoint should pass policy",
+      "url": "https://api.example.com/paid-data",
+      "expect": "approved",
+      "requirement": {
+        "scheme": "exact",
+        "network": "base-sepolia",
+        "asset": "USDC",
+        "payTo": "0x0000000000000000000000000000000000000000",
+        "maxAmountRequired": "10000",
+        "resource": "https://api.example.com/paid-data"
+      }
+    }
+  ]
+}
