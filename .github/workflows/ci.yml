@@ -20,8 +20,13 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            website/package-lock.json
       - run: npm ci
       - run: npm run check
       - run: npm test
       - run: npm run audit
       - run: npm pack --dry-run
+      - run: npm --prefix website ci
+      - run: npm run site:build

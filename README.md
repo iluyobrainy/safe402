@@ -362,6 +362,16 @@ import { createJsonFileReceiptStore } from "safe402/node";
 - `examples/json-file-receipts.ts`
 - `safe402.config.example.json`
 
+## Documentation Website
+
+The production documentation website lives in `website/`.
+
+```bash
+npm --prefix website install
+npm run site:dev
+npm run site:build
+```
+
 ## Development
 
 ```bash
@@ -370,6 +380,7 @@ npm run check
 npm test
 npm run audit
 npm pack --dry-run
+npm run site:build
 ```
 
 ## Production Notes

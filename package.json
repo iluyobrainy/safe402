@@ -38,6 +38,8 @@
     "check": "tsc -p tsconfig.json --noEmit",
     "audit": "node dist/cli.js audit",
     "test": "npm run build && node --test tests/*.test.mjs",
+    "site:dev": "npm --prefix website run dev",
+    "site:build": "npm --prefix website run build",
     "prepare": "npm run build"
   },
   "keywords": [
