@@ -48,10 +48,11 @@ const commandScenarios: CommandScenario[] = [
     output: [
       "Safe402 probe",
       "Checks: 2 passed, 0 failed, 0 warnings",
+      "decision: APPROVED",
       "[pass] endpoint policy check",
       "[pass] endpoint metadata privacy"
     ],
-    expectation: "Probe before paying: inspect the live x402 requirement without signing or sending funds."
+    expectation: "Probe before paying: inspect every accepts option without a private key, signature, or funds transfer."
   },
   {
     id: "audit",
@@ -99,6 +100,8 @@ const policyRows = [
   ["dailyBudgetUsd", "Uses receipts to stop the agent from crossing a daily budget."],
   ["allowedDomains", "Keeps payment flows limited to known vendors and endpoints."],
   ["allowedNetworks", "Blocks chain mismatches before a wallet signs."],
+  ["allowedPayees", "Allows only known recipient addresses."],
+  ["blockedPayees", "Blocks known-bad recipient addresses even if other fields look safe."],
   ["blockSensitiveMetadata", "Catches obvious emails, secrets, phone numbers, and risky query params."],
   ["blockPaymentIntentChanges", "Stops mutated retry bodies between challenge and payment."],
   ["requirePaymentResponseHeader", "Requires receipt proof after payment when your policy demands it."],

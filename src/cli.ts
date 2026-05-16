@@ -6,6 +6,7 @@ import {
   type Safe402AuditCase
 } from "./audit/index.js";
 import {
+  formatProbeMarkdownReport,
   formatProbeReport,
   runProbe
 } from "./probe/index.js";
@@ -69,7 +70,7 @@ async function runProbeCommand(args: string[]) {
     endpoints
   });
 
-  printReport(args, report, formatProbeReport);
+  printReport(args, report, formatProbeReport, formatProbeMarkdownReport);
 }
 
 async function runAuditCommand(args: string[]) {
@@ -129,10 +130,13 @@ async function loadConfig(path: string): Promise<Safe402Config> {
 function printReport<T extends { summary: { failed: number } }>(
   args: string[],
   report: T,
-  formatter: (report: T) => string
+  formatter: (report: T) => string,
+  markdownFormatter?: (report: T) => string
 ) {
   if (hasFlag(args, "--json")) {
     console.log(JSON.stringify(report, null, 2));
+  } else if (hasFlag(args, "--markdown")) {
+    console.log(markdownFormatter ? markdownFormatter(report) : formatter(report));
   } else {
     console.log(formatter(report));
   }
@@ -180,6 +184,7 @@ Options:
   --url       Endpoint to probe without paying
   --config    Load policy, probe endpoints, and audit cases from JSON
   --json      Print machine-readable output
+  --markdown  Print Markdown output when supported
   --help      Show help
 `);
 }
@@ -192,6 +197,7 @@ Usage:
   safe402 probe --config safe402.config.json
 
 Probe performs an unpaid fetch, extracts the x402 payment requirement, and checks it against policy.
+It never requires a private key, signs payment data, or sends funds.
 `);
 }
 

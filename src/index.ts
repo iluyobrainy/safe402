@@ -26,6 +26,7 @@ export {
 
 export {
   createSafe402Probe,
+  formatProbeMarkdownReport,
   formatProbeReport,
   probeEndpoint,
   quoteProbe,
@@ -36,7 +37,10 @@ export {
   type Safe402ProbeQuote,
   type Safe402ProbeReport,
   type Safe402ProbeResult,
-  type Safe402ProbeStatus
+  type Safe402ProbeStatus,
+  type Safe402ProbeDecisionCategory,
+  type Safe402EvaluatedProbeOption,
+  type Safe402ProbePaymentOption
 } from "./probe/index.js";
 
 export {

@@ -101,6 +101,8 @@ npx safe402 probe --url https://api.example.com/paid-data
 
 This performs an unpaid preflight request. It does not sign, settle, or retry a paid request.
 
+Probe captures `402 Payment Required` challenges from `PAYMENT-REQUIRED`, `X-PAYMENT-REQUIRED`, `WWW-Authenticate`, and body-based `accepts` arrays. It evaluates every accepts option, normalizes the payment fields, selects the best compatible option, and returns all blocked options with the reason each one failed policy.
+
 Probe with config:
 
 ```bash
@@ -112,6 +114,26 @@ Machine-readable output:
 ```bash
 npx safe402 probe --url https://api.example.com/paid-data --json
 ```
+
+Markdown output:
+
+```bash
+npx safe402 probe --url https://api.example.com/paid-data --markdown
+```
+
+Probe decision categories:
+
+| Category | Meaning |
+| --- | --- |
+| `APPROVED` | A compatible option matches policy and has no suspicious findings. |
+| `NEEDS_APPROVAL` | A compatible option is above the configured approval threshold. |
+| `BLOCKED_BY_POLICY` | No compatible option matches the configured policy. |
+| `SUSPICIOUS` | The requirement has amount ambiguity or privacy-sensitive metadata. |
+| `INVALID_X402` | The endpoint did not return a valid x402 challenge. |
+| `FREE_OR_NOT_GATED` | The endpoint returned a normal success response without x402. |
+| `UNREACHABLE` | The endpoint could not be reached or was unavailable. |
+
+Probe checks for amount ambiguity such as human-readable price text disagreeing with `maxAmountRequired`, unclear asset decimals, explicit `amountUsd` mismatch, and suspiciously low or high amounts. It also scans payment metadata for emails, phone numbers, API keys, bearer tokens, sensitive query params, private task reasons, wallet-linked notes, and personal identifiers.
 
 ## Audit CLI
 
@@ -153,7 +175,8 @@ Example config:
     "allowedDomains": ["api.example.com"],
     "allowedNetworks": ["base-sepolia"],
     "allowedAssets": ["USDC"],
-    "allowedPayTo": ["0x0000000000000000000000000000000000000000"],
+    "allowedPayees": ["0x0000000000000000000000000000000000000000"],
+    "blockedPayees": [],
     "blockSensitiveMetadata": true,
     "blockPaymentIntentChanges": true,
     "requirePaymentResponseHeader": true
@@ -282,8 +305,10 @@ const response = await safeFetch("https://api.example.com/paid-data");
 | `blockedDomains` | These domains are always blocked. |
 | `allowedNetworks` | Only these x402 networks can be used. |
 | `allowedAssets` | Only these payment assets can be used. |
-| `allowedPayTo` | Only these recipient addresses can be paid. |
-| `blockSensitiveMetadata` | Blocks obvious emails, phone numbers, secrets, and sensitive query params in x402 metadata. |
+| `allowedPayees` | Only these recipient addresses can be paid. |
+| `blockedPayees` | These recipient addresses are always blocked. |
+| `allowedPayTo` | Backward-compatible alias for `allowedPayees`. |
+| `blockSensitiveMetadata` | Blocks obvious emails, phone numbers, API keys, bearer tokens, private task reasons, wallet-linked notes, personal identifiers, and sensitive query params in x402 metadata. |
 | `blockPaymentIntentChanges` | Blocks request mutation between the 402 challenge and the paid retry. |
 | `requirePaymentResponseHeader` | Requires a `PAYMENT-RESPONSE` or `X-PAYMENT-RESPONSE` header after payment. |
 | `failOnPaidStatusCodes` | Treats configured paid response status codes as failed paid-but-denied flows. Defaults to `401` and `403`. |

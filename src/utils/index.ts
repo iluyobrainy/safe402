@@ -5,6 +5,9 @@ import type {
   Safe402Policy,
   Safe402PrivacyFinding
 } from "../types.js";
+import { extractPaymentRequirement as extractPaymentRequirementFromProbe } from "../probe/extractRequirement.js";
+import { parseRequirementAmount as parseProbeRequirementAmount } from "../probe/parseRequirementAmount.js";
+import { findSensitiveStrings } from "./redaction.js";
 
 const KNOWN_ASSET_DECIMALS: Record<string, number> = {
   usdc: 6,
@@ -13,63 +16,14 @@ const KNOWN_ASSET_DECIMALS: Record<string, number> = {
 };
 
 export async function extractPaymentRequirement(response: Response): Promise<Safe402PaymentRequirement> {
-  const headerRequirement = parsePaymentRequirementHeader(
-    response.headers.get("PAYMENT-REQUIRED") ?? response.headers.get("X-PAYMENT-REQUIRED")
-  );
-
-  if (headerRequirement) {
-    return headerRequirement;
-  }
-
-  const payload = await response.clone().json().catch(() => undefined) as unknown;
-
-  if (isRecord(payload)) {
-    const accepts = payload.accepts;
-    if (Array.isArray(accepts) && accepts.length > 0 && isRecord(accepts[0])) {
-      return accepts[0] as Safe402PaymentRequirement;
-    }
-  }
-
-  return {};
+  return extractPaymentRequirementFromProbe(response);
 }
 
 export function parseRequirementAmount(
   requirement: Safe402PaymentRequirement,
   policy: Safe402Policy = {}
 ): Safe402ParsedAmount {
-  const value = requirement.maxAmountRequired ?? requirement.amount;
-
-  if (value === undefined || value === null) {
-    return { valid: false, amountUsd: 0, raw: undefined, reason: "Payment amount is missing." };
-  }
-
-  const raw = String(value).trim();
-
-  if (!raw) {
-    return { valid: false, amountUsd: 0, raw: undefined, reason: "Payment amount is missing." };
-  }
-
-  if (!/^\d+(\.\d+)?$/.test(raw)) {
-    return { valid: false, amountUsd: 0, raw, reason: `Payment amount ${raw} is invalid.` };
-  }
-
-  const decimals = resolveAssetDecimals(requirement, policy);
-  const parsed = Number(raw);
-
-  if (!Number.isFinite(parsed)) {
-    return { valid: false, amountUsd: 0, raw, reason: `Payment amount ${raw} is invalid.` };
-  }
-
-  if (!raw.includes(".") && decimals !== undefined) {
-    return {
-      valid: true,
-      amountUsd: parsed / 10 ** decimals,
-      raw,
-      reason: `Parsed atomic amount with ${decimals} decimals.`
-    };
-  }
-
-  return { valid: true, amountUsd: parsed, raw, reason: "Parsed decimal amount." };
+  return parseProbeRequirementAmount(requirement, policy);
 }
 
 export function createPaymentIntentFingerprint(input: Safe402PaymentIntentInput): string {
@@ -86,36 +40,7 @@ export function createPaymentIntentFingerprint(input: Safe402PaymentIntentInput)
 }
 
 export function findSensitivePaymentMetadata(requirement: Safe402PaymentRequirement): Safe402PrivacyFinding[] {
-  const findings: Safe402PrivacyFinding[] = [];
-  const fields = {
-    resource: requirement.resource,
-    description: requirement.description,
-    mimeType: requirement.mimeType
-  };
-
-  for (const [field, value] of Object.entries(fields)) {
-    if (typeof value !== "string") {
-      continue;
-    }
-
-    if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(value)) {
-      findings.push({ field, type: "email" });
-    }
-
-    if (/\+?\d[\d\s().-]{8,}\d/.test(value)) {
-      findings.push({ field, type: "phone" });
-    }
-
-    if (/(sk-[A-Za-z0-9_-]{12,}|ghp_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|bearer\s+[A-Za-z0-9._-]{12,})/i.test(value)) {
-      findings.push({ field, type: "secret" });
-    }
-
-    if (/[?&](api[_-]?key|access[_-]?token|auth[_-]?token|secret|password)=/i.test(value)) {
-      findings.push({ field, type: "sensitive_query" });
-    }
-  }
-
-  return findings;
+  return findSensitiveStrings(requirement, "paymentRequirement");
 }
 
 export function createDuplicateKey(url: URL, requirement: Safe402PaymentRequirement): string {

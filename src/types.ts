@@ -9,14 +9,20 @@ export type Safe402DecisionStatus =
 export type Safe402PaymentRequirement = {
   scheme?: string;
   network?: string;
+  chain?: string;
   asset?: string;
   assetDecimals?: number;
   payTo?: string;
+  facilitator?: string;
   maxAmountRequired?: string;
   amount?: string;
+  amountUsd?: number | string;
   resource?: string;
   description?: string;
   mimeType?: string;
+  expiresAt?: string | number;
+  ttl?: number;
+  ttlSeconds?: number;
   extra?: Record<string, unknown>;
   [key: string]: unknown;
 };
@@ -29,6 +35,9 @@ export type Safe402Policy = {
   allowedNetworks?: string[];
   allowedAssets?: string[];
   allowedPayTo?: string[];
+  allowedPayees?: string[];
+  blockedPayees?: string[];
+  blockedPayTo?: string[];
   assetDecimalsByAsset?: Record<string, number>;
   defaultAssetDecimals?: number;
   blockSensitiveMetadata?: boolean;
@@ -81,9 +90,26 @@ export type Safe402ParsedAmount = {
   amountUsd: number;
   raw: string | undefined;
   reason: string;
+  amount?: string;
+  maxAmountRequired?: string;
+  source?: "amountUsd" | "maxAmountRequired" | "amount";
+  assetDecimals?: number;
+  decimalsSource?: "requirement" | "extra" | "policy" | "known_asset" | "none";
+  atomic?: boolean;
+  warnings?: string[];
 };
 
 export type Safe402PrivacyFinding = {
   field: string;
-  type: "email" | "phone" | "secret" | "sensitive_query";
+  type:
+    | "email"
+    | "phone"
+    | "secret"
+    | "api_key"
+    | "bearer_token"
+    | "private_task_reason"
+    | "sensitive_query"
+    | "wallet_linked_note"
+    | "personal_identifier";
+  value?: string;
 };
