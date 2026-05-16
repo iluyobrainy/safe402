@@ -7,14 +7,19 @@ import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import {
   Safe402Error,
+  createSafe402Audit,
   createMemoryReceiptStore,
   createPaymentIntentFingerprint,
+  createSafe402Probe,
   createSafe402Fetch,
+  defaultPolicy,
   evaluatePayment,
   findSensitivePaymentMetadata,
+  loadPolicy,
   parseRequirementAmount
 } from "../dist/index.js";
 import { runSafe402Audit } from "../dist/audit.js";
+import { runProbe } from "../dist/probe/index.js";
 import { createSafe402McpTools } from "../dist/mcp.js";
 import { createJsonFileReceiptStore } from "../dist/node.js";
 
@@ -181,9 +186,44 @@ test("payment intent fingerprint changes when request body changes", () => {
 test("audit passes built-in checks", async () => {
   const report = await runSafe402Audit();
 
+  assert.equal(report.kind, "audit");
   assert.equal(report.summary.failed, 0);
   assert.equal(report.summary.warnings, 0);
   assert.ok(report.summary.passed >= 14);
+});
+
+test("probe inspects an x402 endpoint without paying", async () => {
+  const report = await runProbe({
+    endpoints: ["https://api.example.com/paid-data"],
+    policy: {
+      maxPaymentUsd: 0.1,
+      allowedDomains: ["api.example.com"]
+    },
+    fetch: async () => new Response(JSON.stringify({ accepts: [requirement] }), { status: 402 })
+  });
+
+  assert.equal(report.kind, "probe");
+  assert.equal(report.summary.failed, 0);
+  assert.equal(report.probes[0].decision.status, "approved");
+});
+
+test("public factories, quotes, and policy defaults are available", async () => {
+  const probe = createSafe402Probe({
+    endpoints: ["https://api.example.com/paid-data"],
+    fetch: async () => new Response(JSON.stringify({ accepts: [requirement] }), { status: 402 }),
+    policy: {
+      maxPaymentUsd: 0.1,
+      allowedDomains: ["api.example.com"]
+    }
+  });
+  const audit = createSafe402Audit();
+  const policy = loadPolicy({ maxPaymentUsd: 0.1 });
+
+  assert.equal(defaultPolicy.blockPaymentIntentChanges, true);
+  assert.deepEqual(policy.failOnPaidStatusCodes, [401, 403]);
+  assert.equal(probe.quote().estimatedPayments, 0);
+  assert.equal(audit.quote().estimatedPayments, 0);
+  assert.equal((await probe.run()).summary.failed, 0);
 });
 
 test("MCP tools expose check, receipts, and budget handlers", async () => {
@@ -236,6 +276,7 @@ test("CLI help exits successfully", async () => {
   const { stdout } = await execFileAsync(process.execPath, ["dist/cli.js", "--help"]);
 
   assert.match(stdout, /safe402 audit/);
+  assert.match(stdout, /safe402 probe/);
 });
 
 test("CLI audit JSON output is machine-readable", async () => {

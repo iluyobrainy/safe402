@@ -32,7 +32,7 @@ type CommandScenario = {
 
 const navItems: NavItem[] = [
   { id: "overview", label: "Overview" },
-  { id: "audit", label: "Audit CLI" },
+  { id: "audit", label: "Probe + Audit CLI" },
   { id: "sdk", label: "Runtime fuse" },
   { id: "mcp", label: "MCP wrapper" },
   { id: "policy", label: "Policy" },
@@ -41,6 +41,18 @@ const navItems: NavItem[] = [
 ];
 
 const commandScenarios: CommandScenario[] = [
+  {
+    id: "probe",
+    label: "Probe",
+    command: "npx safe402 probe --url https://api.example.com/paid-data",
+    output: [
+      "Safe402 probe",
+      "Checks: 2 passed, 0 failed, 0 warnings",
+      "[pass] endpoint policy check",
+      "[pass] endpoint metadata privacy"
+    ],
+    expectation: "Probe before paying: inspect the live x402 requirement without signing or sending funds."
+  },
   {
     id: "audit",
     label: "Audit",
@@ -55,7 +67,7 @@ const commandScenarios: CommandScenario[] = [
       "[pass] blocks duplicate payment replay",
       "[pass] fingerprints payment intent"
     ],
-    expectation: "Run this before any x402 agent, API, MCP tool, or payment flow goes public."
+    expectation: "Audit before shipping: simulate payment-flow failures before any x402 flow goes public."
   },
   {
     id: "sdk",
@@ -218,8 +230,8 @@ function Hero() {
             Safe402 makes x402 payments shippable.
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-8 text-zinc-400 md:text-lg">
-            Audit x402 payment flows before launch, then protect production agents with intent fingerprints,
-            retry-loop fuses, metadata checks, receipt validation, and MCP-ready tool handlers.
+            Probe x402 endpoints before paying, audit payment flows before launch, then protect production
+            agents with intent fingerprints, retry-loop fuses, metadata checks, and MCP-ready tool handlers.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <a
@@ -227,7 +239,7 @@ function Hero() {
               className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-300 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-200 active:translate-y-[1px]"
             >
               <TerminalWindow size={18} />
-              Run the audit
+              Probe an endpoint
             </a>
             <a
               href="#sdk"
@@ -256,7 +268,7 @@ function HeroPanel() {
           <span className="rounded bg-white/5 px-2 py-1 text-xs text-zinc-500">preflight and runtime</span>
         </div>
         <div className="grid gap-3 py-4">
-          <FlowRow icon={<Gauge size={18} />} title="Audit preflight" detail="wrong chain, wrong asset, overprice" state="tested" />
+          <FlowRow icon={<Gauge size={18} />} title="Probe preflight" detail="wrong chain, wrong asset, overprice" state="checked" />
           <FlowRow icon={<Receipt size={18} />} title="Receipt proof" detail="PAYMENT-RESPONSE required" state="verified" />
           <FlowRow icon={<ArrowsClockwise size={18} />} title="Runtime fuse" detail="retry loop and mutation stopped" state="blocked" />
           <FlowRow icon={<LockKey size={18} />} title="Privacy guard" detail="PII and private task data scanned" state="clean" />
@@ -314,8 +326,8 @@ function CommandLab() {
     <section id="audit" className="border-b border-white/8 px-4 py-16 md:px-8 md:py-20">
       <SectionHeader
         eyebrow="Interactive command line"
-        title="Type the command, get a launch-readiness report."
-        body="Safe402 is designed to be felt from the terminal first. The audit command tells developers what passed, what failed, why it failed, and how to fix it before payment code reaches production."
+        title="Probe before paying. Audit before shipping."
+        body="Safe402 is designed to be felt from the terminal first. Probe inspects what a live endpoint wants your agent to pay. Audit simulates failure scenarios and explains what passed, what failed, why, and how to fix it."
       />
       <div className="mt-10 grid gap-6 xl:grid-cols-[0.86fr_1.14fr]">
         <div className="grid content-start gap-3">
@@ -378,7 +390,7 @@ function QuickStart() {
       <SectionHeader
         eyebrow="Quick start"
         title="Add Safe402 where the agent would normally call paid fetch."
-        body="The developer keeps their wallet, x402 client, payment fetch, and storage. Safe402 audits the dangerous edges and enforces the rules passed into it."
+        body="The developer keeps their wallet, x402 client, payment fetch, and storage. Safe402 probes, audits, and enforces the rules passed into it."
       />
       <div className="mt-10 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <CodePanel
@@ -454,15 +466,20 @@ function SdkSection() {
       <SectionHeader
         eyebrow="SDK"
         title="The runtime fuse is intentionally small."
-        body="Developers should be able to audit, wrap, and explain x402 payment behavior without adopting a new payment platform."
+        body="Developers should be able to probe, audit, wrap, and explain x402 payment behavior without adopting a new payment platform."
       />
       <div className="mt-10 grid gap-4 xl:grid-cols-[0.7fr_1.3fr]">
         <div className="rounded-xl border border-white/10 bg-white/[0.025] p-5">
           <h3 className="text-lg font-semibold">Public exports</h3>
           <div className="mt-5 grid gap-3 text-sm text-zinc-400">
             <MonoLine text="createSafe402Fetch" />
+            <MonoLine text="createSafe402Probe" />
+            <MonoLine text="runProbe" />
+            <MonoLine text="createSafe402Audit" />
+            <MonoLine text="runAudit" />
             <MonoLine text="Safe402Error" />
             <MonoLine text="evaluatePayment" />
+            <MonoLine text="loadPolicy" />
             <MonoLine text="extractPaymentRequirement" />
             <MonoLine text="parseRequirementAmount" />
             <MonoLine text="createPaymentIntentFingerprint" />
@@ -539,7 +556,7 @@ function PolicySection() {
       <SectionHeader
         eyebrow="Policy"
         title="Rules stay in the developer's code, config, or database."
-        body="Safe402 is local-first by default. It does not phone home to audit flows, enforce policy, or store receipts."
+        body="Safe402 is local-first by default. It does not phone home to probe endpoints, audit flows, enforce policy, or store receipts."
       />
       <div className="mt-10 overflow-hidden rounded-xl border border-white/10">
         {policyRows.map(([field, body]) => (
@@ -603,7 +620,7 @@ function ProductionSection() {
         body="Safe402 gives developers a small toolchain they can run locally, in CI, and inside agent runtimes."
       />
       <div className="mt-10 grid gap-4 md:grid-cols-2">
-        <InfoBlock icon={<CheckCircle size={20} />} title="CI ready" body="The CLI exits with code 1 on failed audit checks and can run beside typecheck and tests." />
+        <InfoBlock icon={<CheckCircle size={20} />} title="CI ready" body="The CLI exits with code 1 on failed probe or audit checks and can run beside typecheck and tests." />
         <InfoBlock icon={<FileText size={20} />} title="Documented limits" body="Safe402 does not custody funds, create wallets, settle payments, proxy traffic, or guarantee vendor quality." />
         <InfoBlock icon={<LockKey size={20} />} title="Local-first" body="Policy and receipts stay in the developer's app unless they choose to connect a hosted store." />
         <InfoBlock icon={<ArrowsClockwise size={20} />} title="Runtime fuse" body="Repeated 402 responses after paid fetch are stopped before a silent payment loop forms." />

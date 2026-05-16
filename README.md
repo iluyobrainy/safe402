@@ -7,6 +7,10 @@ It is a local-first audit and runtime safety kit for developers building x402-po
 Use Safe402 before launch to test whether an x402 implementation is safe, private, reliable, and production-ready. Use it at runtime as a fuse around paid fetch calls.
 
 ```bash
+npx safe402 probe --url https://api.example.com/paid-data
+```
+
+```bash
 npx safe402 audit
 ```
 
@@ -35,6 +39,18 @@ It helps developers catch:
 - PII or secrets in payment metadata
 - broken MCP paid-tool flows
 - mismatches between what was paid for and what was delivered
+
+## Probe vs Audit
+
+Probe and audit are intentionally separate.
+
+Probe answers: what is this endpoint asking my agent to pay, and does it match my policy?
+
+Audit answers: can this x402 payment flow behave safely under real-world failure scenarios?
+
+Use `safe402 probe` when you want to inspect an x402 endpoint before paying it. A probe performs an unpaid request, extracts the payment requirement, evaluates policy, and scans payment metadata for obvious privacy leaks.
+
+Use `safe402 audit` when you want shipping confidence before integrating or publishing an x402 flow. An audit runs built-in and custom safety cases for retry loops, duplicate replay, budget exhaustion, mutated retries, missing receipt headers, paid-but-denied responses, and related failure modes.
 
 ## What Safe402 Is Not
 
@@ -75,7 +91,29 @@ npm install safe402
 
 Safe402 expects Node.js 20 or newer for the CLI and Node-specific helpers.
 
-## Preflight Audit CLI
+## Probe CLI
+
+Probe a live x402 endpoint before paying it:
+
+```bash
+npx safe402 probe --url https://api.example.com/paid-data
+```
+
+This performs an unpaid preflight request. It does not sign, settle, or retry a paid request.
+
+Probe with config:
+
+```bash
+npx safe402 probe --config safe402.config.json
+```
+
+Machine-readable output:
+
+```bash
+npx safe402 probe --url https://api.example.com/paid-data --json
+```
+
+## Audit CLI
 
 Run the built-in safety checks:
 
@@ -99,15 +137,7 @@ Checks: 14 passed, 0 failed, 0 warnings
 
 The audit prints pass, fail, warning, reason, and fix guidance. It exits with code `1` when checks fail, so it can run in CI.
 
-### Audit a Live Endpoint
-
-This performs an unpaid preflight request. It does not sign or pay.
-
-```bash
-npx safe402 audit --url https://api.example.com/paid-data
-```
-
-### Audit With Config
+Audit with config:
 
 ```bash
 npx safe402 audit --config safe402.config.json
@@ -128,21 +158,26 @@ Example config:
     "blockPaymentIntentChanges": true,
     "requirePaymentResponseHeader": true
   },
-  "cases": [
-    {
-      "name": "example endpoint should pass policy",
-      "url": "https://api.example.com/paid-data",
-      "expect": "approved",
-      "requirement": {
-        "scheme": "exact",
-        "network": "base-sepolia",
-        "asset": "USDC",
-        "payTo": "0x0000000000000000000000000000000000000000",
-        "maxAmountRequired": "10000",
-        "resource": "https://api.example.com/paid-data"
+  "probe": {
+    "endpoints": ["https://api.example.com/paid-data"]
+  },
+  "audit": {
+    "cases": [
+      {
+        "name": "example endpoint should pass policy",
+        "url": "https://api.example.com/paid-data",
+        "expect": "approved",
+        "requirement": {
+          "scheme": "exact",
+          "network": "base-sepolia",
+          "asset": "USDC",
+          "payTo": "0x0000000000000000000000000000000000000000",
+          "maxAmountRequired": "10000",
+          "resource": "https://api.example.com/paid-data"
+        }
       }
-    }
-  ]
+    ]
+  }
 }
 ```
 
@@ -374,10 +409,29 @@ Available tools:
 ```ts
 import { createSafe402Fetch } from "safe402";
 import { createPaymentIntentFingerprint } from "safe402";
-import { runSafe402Audit } from "safe402/audit";
+import { runProbe } from "safe402/probe";
+import { runAudit, runSafe402Audit } from "safe402/audit";
+import { defaultPolicy, evaluatePayment, loadPolicy } from "safe402/policy";
 import { createSafe402McpTools } from "safe402/mcp";
 import { createJsonFileReceiptStore } from "safe402/node";
 ```
+
+Primary SDK exports from `safe402`:
+
+- `createSafe402Probe`
+- `runProbe`
+- `createSafe402Audit`
+- `runAudit`
+- `quoteAudit`
+- `quoteProbe`
+- `evaluatePayment`
+- `extractPaymentRequirement`
+- `parseRequirementAmount`
+- `createPaymentIntentFingerprint`
+- `findSensitivePaymentMetadata`
+- `createMemoryReceiptStore`
+- `loadPolicy`
+- `defaultPolicy`
 
 ## Examples
 

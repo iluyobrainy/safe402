@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import type { Safe402Receipt, Safe402ReceiptStore } from "./index.js";
+import type { Safe402Receipt, Safe402ReceiptStore } from "./types.js";
 
 export type JsonFileReceiptStoreOptions = {
   path: string;

@@ -1,11 +1,14 @@
 import {
-  createSafe402Fetch,
-  evaluatePayment,
-  type Safe402FetchConfig,
-  type Safe402PaymentRequirement,
-  type Safe402Policy,
-  type Safe402ReceiptStore
-} from "./index.js";
+  getSpentTodayUsd
+} from "./billing/index.js";
+import { evaluatePayment } from "./policy/index.js";
+import { createSafe402Fetch } from "./runtime.js";
+import type {
+  Safe402FetchConfig,
+  Safe402PaymentRequirement,
+  Safe402Policy,
+  Safe402ReceiptStore
+} from "./types.js";
 
 export type Safe402McpConfig = {
   fetch?: typeof fetch;
@@ -122,10 +125,7 @@ export function createSafe402McpTools(config: Safe402McpConfig): Safe402McpTools
       },
       handler: async () => {
         const receipts = await config.receipts.list();
-        const spentTodayUsd = receipts
-          .filter(receipt => receipt.status === "paid")
-          .filter(receipt => isToday(receipt.timestamp))
-          .reduce((sum, receipt) => sum + receipt.amountUsd, 0);
+        const spentTodayUsd = getSpentTodayUsd(receipts);
         const dailyBudgetUsd = config.policy?.dailyBudgetUsd ?? null;
 
         return {
@@ -136,13 +136,4 @@ export function createSafe402McpTools(config: Safe402McpConfig): Safe402McpTools
       }
     }
   };
-}
-
-function isToday(timestamp: string): boolean {
-  const input = new Date(timestamp);
-  const now = new Date();
-
-  return input.getUTCFullYear() === now.getUTCFullYear() &&
-    input.getUTCMonth() === now.getUTCMonth() &&
-    input.getUTCDate() === now.getUTCDate();
 }

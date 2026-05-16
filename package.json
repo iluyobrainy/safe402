@@ -1,7 +1,7 @@
 {
   "name": "safe402",
   "version": "0.1.0",
-  "description": "Preflight audit and runtime safety kit for x402 agent payments.",
+  "description": "Preflight, probe, audit, and runtime safety kit for x402 agent payments.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,6 +13,26 @@
     "./audit": {
       "types": "./dist/audit.d.ts",
       "import": "./dist/audit.js"
+    },
+    "./probe": {
+      "types": "./dist/probe/index.d.ts",
+      "import": "./dist/probe/index.js"
+    },
+    "./policy": {
+      "types": "./dist/policy/index.d.ts",
+      "import": "./dist/policy/index.js"
+    },
+    "./billing": {
+      "types": "./dist/billing/index.d.ts",
+      "import": "./dist/billing/index.js"
+    },
+    "./reports": {
+      "types": "./dist/reports/index.d.ts",
+      "import": "./dist/reports/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js"
     },
     "./mcp": {
       "types": "./dist/mcp.d.ts",
