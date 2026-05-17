@@ -1,11 +1,12 @@
 {
   "policy": {
-    "maxPaymentUsd": 0.1,
-    "dailyBudgetUsd": 5,
+    "maxPaymentUsd": 0.25,
+    "dailyBudgetUsd": 10,
     "allowedDomains": ["api.example.com"],
-    "allowedNetworks": ["base", "base-sepolia"],
-    "allowedAssets": ["USDC"],
+    "allowedNetworks": ["base", "base-sepolia", "eip155:8453", "eip155:84532"],
+    "allowedAssets": ["USDC", "usdc", "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"],
     "allowedPayees": ["0x0000000000000000000000000000000000000000"],
+    "allowedFacilitators": ["https://facilitator.example.com"],
     "blockedPayees": [],
     "blockSensitiveMetadata": true,
     "blockPaymentIntentChanges": true,
@@ -17,6 +18,11 @@
     "endpoints": []
   },
   "audit": {
+    "profile": "standard",
+    "requestVariants": 0,
+    "mcpServers": 0,
+    "mcpManifests": [],
+    "hostedReport": false,
     "cases": [
       {
         "name": "example endpoint should pass policy",
@@ -28,7 +34,9 @@
           "asset": "USDC",
           "payTo": "0x0000000000000000000000000000000000000000",
           "maxAmountRequired": "10000",
-          "resource": "https://api.example.com/paid-data"
+          "resource": "https://api.example.com/paid-data",
+          "paymentIdentifier": "payment-123",
+          "idempotencyKey": "paid-data-123"
         }
       }
     ]

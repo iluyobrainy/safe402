@@ -46,6 +46,8 @@ export async function evaluatePolicy(input: {
   const network = stringValue(input.requirement.network ?? input.requirement.chain);
   const asset = stringValue(input.requirement.asset);
   const payee = stringValue(input.requirement.payTo);
+  const expiresAt = parseExpiry(input.requirement.expiresAt ?? input.requirement.expires_at ?? input.requirement.expiration);
+  const ttlSeconds = numberValue(input.requirement.ttlSeconds ?? input.requirement.ttl);
 
   if (!parsedAmount.valid) {
     reasons.push({ code: "invalid_amount", message: parsedAmount.reason });
@@ -53,6 +55,14 @@ export async function evaluatePolicy(input: {
 
   if (parsedAmount.valid && amountUsd <= 0) {
     reasons.push({ code: "non_positive_amount", message: "Payment amount must be greater than zero." });
+  }
+
+  if (expiresAt !== undefined && expiresAt <= Date.now()) {
+    reasons.push({ code: "expired_challenge", message: "Payment challenge is expired." });
+  }
+
+  if (ttlSeconds !== undefined && ttlSeconds <= 0) {
+    reasons.push({ code: "expired_challenge", message: "Payment challenge TTL is expired." });
   }
 
   if (includesNormalized(policy.blockedDomains, domain)) {
@@ -79,11 +89,20 @@ export async function evaluatePolicy(input: {
     reasons.push({ code: "asset_not_allowed", message: `Asset ${asset} is not allowed.` });
   }
 
-  if (policy.blockedPayees?.length && payee && includesNormalized(policy.blockedPayees, payee)) {
+  const blockedPayees = [
+    ...(policy.blockedPayees ?? []),
+    ...(policy.blockedPayTo ?? [])
+  ];
+  const allowedPayees = [
+    ...(policy.allowedPayees ?? []),
+    ...(policy.allowedPayTo ?? [])
+  ];
+
+  if (blockedPayees.length && payee && includesNormalized(blockedPayees, payee)) {
     reasons.push({ code: "blocked_payee", message: `Payee ${payee} is blocked.` });
   }
 
-  if (policy.allowedPayees?.length && payee && !includesNormalized(policy.allowedPayees, payee)) {
+  if (allowedPayees.length && payee && !includesNormalized(allowedPayees, payee)) {
     reasons.push({ code: "payee_not_allowed", message: `Payee ${payee} is not allowed.` });
   }
 
@@ -166,4 +185,35 @@ export async function evaluatePayment(input: {
 
 function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function numberValue(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+}
+
+function parseExpiry(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value > 10_000_000_000 ? value : value * 1000;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+      return numeric > 10_000_000_000 ? numeric : numeric * 1000;
+    }
+
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
 }

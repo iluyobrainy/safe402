@@ -1,4 +1,12 @@
-import { createMemoryReceiptStore } from "../billing/index.js";
+import {
+  createMemoryReceiptStore,
+  type Safe402ProbeBillingReceipt
+} from "../billing/index.js";
+import {
+  PROBE_PRICE_USD,
+  calculateProbePrice,
+  formatUsd as formatPriceUsd
+} from "../pricing.js";
 import {
   formatCheckReport,
   summarizeChecks,
@@ -64,9 +72,20 @@ export type Safe402ProbeResult = {
 
 export type Safe402ProbeReport = {
   kind: "probe";
+  reportType: "probe";
+  generatedAt: string;
+  targetUrl?: string;
+  targets: string[];
+  method: string;
   probes: Safe402ProbeResult[];
   checks: Safe402ProbeCheck[];
   summary: Safe402ReportSummary;
+  pricing: {
+    unitPriceUsd: number;
+    endpointChecks: number;
+    totalUsd: number;
+  };
+  billing?: Safe402ProbeBillingReceipt;
   note: string;
 };
 
@@ -106,9 +125,19 @@ export async function runProbe(options: Safe402ProbeOptions = {}): Promise<Safe4
 
   return {
     kind: "probe",
+    reportType: "probe",
+    generatedAt: new Date().toISOString(),
+    targetUrl: options.endpoints?.[0],
+    targets: options.endpoints ?? [],
+    method: requestMethod(options.requestInit),
     probes,
     checks,
     summary: summarizeChecks(checks),
+    pricing: {
+      unitPriceUsd: PROBE_PRICE_USD,
+      endpointChecks: probes.length,
+      totalUsd: calculateProbePrice(probes.length)
+    },
     note: "Probe performs unpaid x402 endpoint inspection and policy evaluation only."
   };
 }
@@ -243,6 +272,8 @@ export function quoteProbe(options: Safe402ProbeOptions = {}): Safe402ProbeQuote
 
 export function formatProbeReport(report: Safe402ProbeReport): string {
   const lines = [
+    `Safe402 Probe: ${formatPriceUsd(report.pricing.unitPriceUsd)} per endpoint check`,
+    ...(report.billing ? [`Billing: ${report.billing.message}`] : []),
     formatCheckReport("Safe402 probe", report.checks),
     ""
   ];
@@ -266,6 +297,9 @@ export function formatProbeMarkdownReport(report: Safe402ProbeReport): string {
   const lines = [
     "# Safe402 Probe Report",
     "",
+    `Safe402 Probe: ${formatPriceUsd(report.pricing.unitPriceUsd)} per endpoint check`,
+    "",
+    ...(report.billing ? [`Billing: ${report.billing.message}`, ""] : []),
     `Checks: ${report.summary.passed} passed, ${report.summary.failed} failed, ${report.summary.warnings} warnings`,
     ""
   ];
@@ -320,6 +354,7 @@ function checksFromEvaluation(endpoint: string, options: Safe402EvaluatedProbeOp
       amountUsd: option.amountUsd,
       source: option.option.source,
       blockedReasons: option.blockedReasons,
+      policyReasonCodes: option.policy.reasons.map(reason => reason.code),
       privacyFindings: option.privacyFindings.map(finding => finding.type),
       amountAmbiguityFindings: option.amountAmbiguityFindings.map(finding => finding.code)
     }
@@ -366,4 +401,8 @@ function mergeProbeOptions(base: Safe402ProbeOptions, next: Safe402ProbeOptions)
     endpoints: next.endpoints ?? base.endpoints,
     requestInit: next.requestInit ?? base.requestInit
   };
+}
+
+function requestMethod(init?: RequestInit): string {
+  return (init?.method ?? "GET").toUpperCase();
 }

@@ -38,6 +38,7 @@ export type Safe402Policy = {
   allowedPayees?: string[];
   blockedPayees?: string[];
   blockedPayTo?: string[];
+  allowedFacilitators?: string[];
   assetDecimalsByAsset?: Record<string, number>;
   defaultAssetDecimals?: number;
   blockSensitiveMetadata?: boolean;

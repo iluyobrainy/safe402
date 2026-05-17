@@ -1,0 +1,413 @@
+{
+  "kind": "probe",
+  "reportType": "probe",
+  "generatedAt": "2026-05-17T00:00:00.000Z",
+  "targetUrl": "https://another-agent.com/paid-tool",
+  "targets": [
+    "https://another-agent.com/paid-tool"
+  ],
+  "method": "GET",
+  "probes": [
+    {
+      "url": "https://another-agent.com/paid-tool",
+      "status": "fail",
+      "category": "BLOCKED_BY_POLICY",
+      "explanation": "Blocked by policy. Endpoint requested $2.00, but your max auto-spend is $0.25. This does not mean the provider is malicious. No accepts option matched the current policy.",
+      "responseStatus": 402,
+      "requirement": {
+        "scheme": "exact",
+        "network": "base-sepolia",
+        "asset": "USDC",
+        "payTo": "0x0000000000000000000000000000000000000000",
+        "maxAmountRequired": "2000000",
+        "resource": "https://another-agent.com/paid-tool",
+        "description": "Paid tool access. Price is $2.00.",
+        "source": "body",
+        "optionIndex": 0,
+        "raw": {
+          "scheme": "exact",
+          "network": "base-sepolia",
+          "asset": "USDC",
+          "payTo": "0x0000000000000000000000000000000000000000",
+          "maxAmountRequired": "2000000",
+          "resource": "https://another-agent.com/paid-tool",
+          "description": "Paid tool access. Price is $2.00."
+        },
+        "chain": "base-sepolia",
+        "amountUsd": 2,
+        "extra": {}
+      },
+      "decision": {
+        "status": "denied",
+        "reason": "Payment 2 exceeds per-call limit 0.25.",
+        "url": "https://another-agent.com/paid-tool",
+        "domain": "another-agent.com",
+        "amountUsd": 2,
+        "requirement": {
+          "scheme": "exact",
+          "network": "base-sepolia",
+          "asset": "USDC",
+          "payTo": "0x0000000000000000000000000000000000000000",
+          "maxAmountRequired": "2000000",
+          "resource": "https://another-agent.com/paid-tool",
+          "description": "Paid tool access. Price is $2.00.",
+          "source": "body",
+          "optionIndex": 0,
+          "raw": {
+            "scheme": "exact",
+            "network": "base-sepolia",
+            "asset": "USDC",
+            "payTo": "0x0000000000000000000000000000000000000000",
+            "maxAmountRequired": "2000000",
+            "resource": "https://another-agent.com/paid-tool",
+            "description": "Paid tool access. Price is $2.00."
+          },
+          "chain": "base-sepolia",
+          "amountUsd": 2,
+          "extra": {}
+        },
+        "duplicateKey": "https://another-agent.com|/paid-tool|base-sepolia|USDC|0x0000000000000000000000000000000000000000|2000000",
+        "timestamp": "2026-05-17T13:35:38.419Z"
+      },
+      "selectedOption": {
+        "option": {
+          "index": 0,
+          "source": "body",
+          "requirement": {
+            "scheme": "exact",
+            "network": "base-sepolia",
+            "asset": "USDC",
+            "payTo": "0x0000000000000000000000000000000000000000",
+            "maxAmountRequired": "2000000",
+            "resource": "https://another-agent.com/paid-tool",
+            "description": "Paid tool access. Price is $2.00.",
+            "source": "body",
+            "optionIndex": 0,
+            "raw": {
+              "scheme": "exact",
+              "network": "base-sepolia",
+              "asset": "USDC",
+              "payTo": "0x0000000000000000000000000000000000000000",
+              "maxAmountRequired": "2000000",
+              "resource": "https://another-agent.com/paid-tool",
+              "description": "Paid tool access. Price is $2.00."
+            },
+            "chain": "base-sepolia",
+            "amountUsd": 2,
+            "extra": {}
+          },
+          "parsedAmount": {
+            "valid": true,
+            "amountUsd": 2,
+            "raw": "2",
+            "reason": "Parsed explicit amountUsd.",
+            "maxAmountRequired": "2000000",
+            "source": "amountUsd",
+            "decimalsSource": "none",
+            "atomic": false,
+            "warnings": []
+          }
+        },
+        "category": "BLOCKED_BY_POLICY",
+        "amountUsd": 2,
+        "policy": {
+          "allowed": false,
+          "status": "denied",
+          "reason": "Payment 2 exceeds per-call limit 0.25.",
+          "reasons": [
+            {
+              "code": "max_payment_exceeded",
+              "message": "Payment 2 exceeds per-call limit 0.25."
+            }
+          ],
+          "amountUsd": 2,
+          "duplicateKey": "https://another-agent.com|/paid-tool|base-sepolia|USDC|0x0000000000000000000000000000000000000000|2000000"
+        },
+        "privacyFindings": [],
+        "amountAmbiguityFindings": [],
+        "blockedReasons": [
+          "Payment 2 exceeds per-call limit 0.25."
+        ],
+        "explanation": "Blocked by policy. Endpoint requested $2.00, but your max auto-spend is $0.25. This does not mean the provider is malicious."
+      },
+      "options": [
+        {
+          "option": {
+            "index": 0,
+            "source": "body",
+            "requirement": {
+              "scheme": "exact",
+              "network": "base-sepolia",
+              "asset": "USDC",
+              "payTo": "0x0000000000000000000000000000000000000000",
+              "maxAmountRequired": "2000000",
+              "resource": "https://another-agent.com/paid-tool",
+              "description": "Paid tool access. Price is $2.00.",
+              "source": "body",
+              "optionIndex": 0,
+              "raw": {
+                "scheme": "exact",
+                "network": "base-sepolia",
+                "asset": "USDC",
+                "payTo": "0x0000000000000000000000000000000000000000",
+                "maxAmountRequired": "2000000",
+                "resource": "https://another-agent.com/paid-tool",
+                "description": "Paid tool access. Price is $2.00."
+              },
+              "chain": "base-sepolia",
+              "amountUsd": 2,
+              "extra": {}
+            },
+            "parsedAmount": {
+              "valid": true,
+              "amountUsd": 2,
+              "raw": "2",
+              "reason": "Parsed explicit amountUsd.",
+              "maxAmountRequired": "2000000",
+              "source": "amountUsd",
+              "decimalsSource": "none",
+              "atomic": false,
+              "warnings": []
+            }
+          },
+          "category": "BLOCKED_BY_POLICY",
+          "amountUsd": 2,
+          "policy": {
+            "allowed": false,
+            "status": "denied",
+            "reason": "Payment 2 exceeds per-call limit 0.25.",
+            "reasons": [
+              {
+                "code": "max_payment_exceeded",
+                "message": "Payment 2 exceeds per-call limit 0.25."
+              }
+            ],
+            "amountUsd": 2,
+            "duplicateKey": "https://another-agent.com|/paid-tool|base-sepolia|USDC|0x0000000000000000000000000000000000000000|2000000"
+          },
+          "privacyFindings": [],
+          "amountAmbiguityFindings": [],
+          "blockedReasons": [
+            "Payment 2 exceeds per-call limit 0.25."
+          ],
+          "explanation": "Blocked by policy. Endpoint requested $2.00, but your max auto-spend is $0.25. This does not mean the provider is malicious."
+        }
+      ],
+      "paymentOptions": [
+        {
+          "index": 0,
+          "source": "body",
+          "requirement": {
+            "scheme": "exact",
+            "network": "base-sepolia",
+            "asset": "USDC",
+            "payTo": "0x0000000000000000000000000000000000000000",
+            "maxAmountRequired": "2000000",
+            "resource": "https://another-agent.com/paid-tool",
+            "description": "Paid tool access. Price is $2.00.",
+            "source": "body",
+            "optionIndex": 0,
+            "raw": {
+              "scheme": "exact",
+              "network": "base-sepolia",
+              "asset": "USDC",
+              "payTo": "0x0000000000000000000000000000000000000000",
+              "maxAmountRequired": "2000000",
+              "resource": "https://another-agent.com/paid-tool",
+              "description": "Paid tool access. Price is $2.00."
+            },
+            "chain": "base-sepolia",
+            "amountUsd": 2,
+            "extra": {}
+          },
+          "parsedAmount": {
+            "valid": true,
+            "amountUsd": 2,
+            "raw": "2",
+            "reason": "Parsed explicit amountUsd.",
+            "maxAmountRequired": "2000000",
+            "source": "amountUsd",
+            "decimalsSource": "none",
+            "atomic": false,
+            "warnings": []
+          }
+        }
+      ],
+      "extraction": {
+        "responseStatus": 402,
+        "headers": {
+          "content-type": "text/plain;charset=UTF-8"
+        },
+        "body": {
+          "text": "{\"accepts\":[{\"scheme\":\"exact\",\"network\":\"base-sepolia\",\"asset\":\"USDC\",\"payTo\":\"0x0000000000000000000000000000000000000000\",\"maxAmountRequired\":\"2000000\",\"resource\":\"https://another-agent.com/paid-tool\",\"description\":\"Paid tool access. Price is $2.00.\"}]}",
+          "json": {
+            "accepts": [
+              {
+                "scheme": "exact",
+                "network": "base-sepolia",
+                "asset": "USDC",
+                "payTo": "0x0000000000000000000000000000000000000000",
+                "maxAmountRequired": "2000000",
+                "resource": "https://another-agent.com/paid-tool",
+                "description": "Paid tool access. Price is $2.00."
+              }
+            ]
+          },
+          "contentType": "text/plain;charset=UTF-8"
+        },
+        "requirements": [
+          {
+            "source": "body",
+            "requirement": {
+              "scheme": "exact",
+              "network": "base-sepolia",
+              "asset": "USDC",
+              "payTo": "0x0000000000000000000000000000000000000000",
+              "maxAmountRequired": "2000000",
+              "resource": "https://another-agent.com/paid-tool",
+              "description": "Paid tool access. Price is $2.00."
+            },
+            "optionIndex": 0
+          }
+        ],
+        "invalidReasons": []
+      },
+      "checks": [
+        {
+          "name": "accepts option 1 https://another-agent.com/paid-tool",
+          "status": "fail",
+          "reason": "Blocked by policy. Endpoint requested $2.00, but your max auto-spend is $0.25. This does not mean the provider is malicious.",
+          "fix": "Choose another accepts option, change policy, or ask the provider to fix the x402 requirement.",
+          "details": {
+            "category": "BLOCKED_BY_POLICY",
+            "amountUsd": 2,
+            "source": "body",
+            "blockedReasons": [
+              "Payment 2 exceeds per-call limit 0.25."
+            ],
+            "policyReasonCodes": [
+              "max_payment_exceeded"
+            ],
+            "privacyFindings": [],
+            "amountAmbiguityFindings": []
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "name": "accepts option 1 https://another-agent.com/paid-tool",
+      "status": "fail",
+      "reason": "Blocked by policy. Endpoint requested $2.00, but your max auto-spend is $0.25. This does not mean the provider is malicious.",
+      "fix": "Choose another accepts option, change policy, or ask the provider to fix the x402 requirement.",
+      "details": {
+        "category": "BLOCKED_BY_POLICY",
+        "amountUsd": 2,
+        "source": "body",
+        "blockedReasons": [
+          "Payment 2 exceeds per-call limit 0.25."
+        ],
+        "policyReasonCodes": [
+          "max_payment_exceeded"
+        ],
+        "privacyFindings": [],
+        "amountAmbiguityFindings": []
+      }
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "warnings": 0
+  },
+  "pricing": {
+    "unitPriceUsd": 0.01,
+    "endpointChecks": 1,
+    "totalUsd": 0.01
+  },
+  "note": "Probe performs unpaid x402 endpoint inspection and policy evaluation only.",
+  "status": "BLOCKED_BY_POLICY",
+  "x402Detected": true,
+  "paymentRequirementsFound": 1,
+  "acceptsOptions": [
+    {
+      "index": 1,
+      "source": "body",
+      "status": "BLOCKED_BY_POLICY",
+      "amountUsd": 2,
+      "network": "base-sepolia",
+      "asset": "USDC",
+      "payTo": "0x0000000000000000000000000000000000000000",
+      "resource": "https://another-agent.com/paid-tool",
+      "description": "Paid tool access. Price is $2.00.",
+      "policyDecision": {
+        "status": "denied",
+        "allowed": false,
+        "reason": "Payment 2 exceeds per-call limit 0.25.",
+        "reasons": [
+          {
+            "code": "max_payment_exceeded",
+            "message": "Payment 2 exceeds per-call limit 0.25."
+          }
+        ]
+      },
+      "privacyFindings": [],
+      "suspiciousFindings": [],
+      "explanation": "Blocked by policy. Endpoint requested $2.00, but your max auto-spend is $0.25. This does not mean the provider is malicious."
+    }
+  ],
+  "selectedOption": {
+    "index": 1,
+    "source": "body",
+    "status": "BLOCKED_BY_POLICY",
+    "amountUsd": 2,
+    "network": "base-sepolia",
+    "asset": "USDC",
+    "payTo": "0x0000000000000000000000000000000000000000",
+    "resource": "https://another-agent.com/paid-tool",
+    "description": "Paid tool access. Price is $2.00.",
+    "policyDecision": {
+      "status": "denied",
+      "allowed": false,
+      "reason": "Payment 2 exceeds per-call limit 0.25.",
+      "reasons": [
+        {
+          "code": "max_payment_exceeded",
+          "message": "Payment 2 exceeds per-call limit 0.25."
+        }
+      ]
+    },
+    "privacyFindings": [],
+    "suspiciousFindings": [],
+    "explanation": "Blocked by policy. Endpoint requested $2.00, but your max auto-spend is $0.25. This does not mean the provider is malicious."
+  },
+  "amountUsd": 2,
+  "network": "base-sepolia",
+  "asset": "USDC",
+  "payTo": "0x0000000000000000000000000000000000000000",
+  "resource": "https://another-agent.com/paid-tool",
+  "description": "Paid tool access. Price is $2.00.",
+  "policyDecision": {
+    "status": "denied",
+    "allowed": false,
+    "reason": "Payment 2 exceeds per-call limit 0.25.",
+    "reasons": [
+      {
+        "code": "max_payment_exceeded",
+        "message": "Payment 2 exceeds per-call limit 0.25."
+      }
+    ]
+  },
+  "privacyFindings": [],
+  "suspiciousFindings": [],
+  "billing": {
+    "product": "probe",
+    "priceUsd": 0.01,
+    "billingMode": "disabled",
+    "mode": "disabled",
+    "paid": false
+  },
+  "finalRecommendation": "Blocked by policy. Endpoint requested $2.00, but your max auto-spend is $0.25. This does not mean the provider is malicious."
+}

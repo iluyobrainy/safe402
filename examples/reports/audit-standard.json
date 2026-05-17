@@ -1,0 +1,1541 @@
+{
+  "kind": "audit",
+  "reportType": "audit",
+  "generatedAt": "2026-05-17T00:00:00.000Z",
+  "quote": {
+    "kind": "audit_quote",
+    "profile": "standard",
+    "quoteBased": false,
+    "endpointsCount": 0,
+    "requestVariantsCount": 0,
+    "mcpScanEnabled": false,
+    "mcpServersCount": 0,
+    "hostedReportEnabled": false,
+    "totalUsd": 2.5,
+    "minimumUsd": 0.5,
+    "priceBreakdown": [
+      {
+        "label": "standard audit endpoint",
+        "unitUsd": 2.5,
+        "quantity": 1,
+        "totalUsd": 2.5
+      }
+    ],
+    "includedChecks": [
+      "full probe",
+      "valid 402 challenge structure",
+      "multiple accepts handling",
+      "policy decision",
+      "human-readable price vs machine-readable amount mismatch",
+      "asset decimals ambiguity check",
+      "unsupported chain and unsupported asset check",
+      "unexpected payTo check",
+      "metadata privacy check for descriptions, resources, reasons, API keys, and wallet-linked data",
+      "basic Markdown and JSON report",
+      "repeated challenge stability test",
+      "payTo mutation check",
+      "amount mutation check",
+      "resource mutation check",
+      "method and body mutation risk",
+      "duplicate retry simulation",
+      "retry-loop dry-run",
+      "payment intent fingerprint analysis for method, URL, body hash, amount, network, asset, payTo, and agentTaskId",
+      "idempotency and payment-identifier check",
+      "missing PAYMENT-RESPONSE and X-PAYMENT-RESPONSE handling",
+      "deeper report with recommended fixes"
+    ],
+    "warnings": [],
+    "note": "Safe402 calculates the audit quote before running checks. Extra scope discovered later must return ADDITIONAL_PAYMENT_REQUIRED instead of silently overcharging."
+  },
+  "verdict": "SAFE_TO_PAY",
+  "answer": "This x402 payment flow behaves safely under the audited failure conditions.",
+  "checks": [
+    {
+      "id": "VALID_402_CHALLENGE",
+      "code": "valid_x402_challenge",
+      "title": "valid 402 challenge structure",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "scheme": "exact",
+        "network": "base-sepolia",
+        "asset": "USDC",
+        "payTo": "0x0000000000000000000000000000000000000000",
+        "resource": "https://api.safe402.test/paid",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "The x402 challenge includes the core payment fields needed for policy evaluation.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "ACCEPTS_OPTIONS_PARSED",
+      "code": "single_accept",
+      "title": "multiple accepts handling",
+      "severity": "INFO",
+      "status": "pass",
+      "evidence": {
+        "accepts": 1,
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "The challenge exposes one payment option.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "HUMAN_MACHINE_PRICE_MATCH",
+      "code": "price_amount_consistent",
+      "title": "human price matches machine amount",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "amountUsd": 0.01,
+        "source": "maxAmountRequired",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "No human-readable price mismatch was detected.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "ASSET_DECIMALS_RESOLVED",
+      "code": "asset_decimals_resolved",
+      "title": "asset decimals ambiguity",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "assetDecimals": 6,
+        "decimalsSource": "known_asset",
+        "atomic": true,
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Asset decimals resolved to 6.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "HUMAN_PRICE_PRESENT",
+      "code": "human_price_present",
+      "title": "clear human-readable price",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "amountUsd": 0.01,
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "The challenge includes a human-readable price.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "CHAIN_ALLOWED",
+      "code": "supported_chain",
+      "title": "supported payment chain",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "network": "base-sepolia",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Network base-sepolia is acceptable for this audit policy.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "ASSET_ALLOWED",
+      "code": "supported_asset",
+      "title": "supported payment asset",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "asset": "USDC",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Asset USDC is acceptable for this audit policy.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "PAYTO_PRESENT",
+      "code": "expected_pay_to",
+      "title": "expected payTo recipient",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "payTo": "0x0000000000000000000000000000000000000000",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "payTo matches the audit policy allowlist.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "description_privacy_clean",
+      "title": "PII in description",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Description metadata did not expose PII.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "resource_privacy_clean",
+      "title": "PII in resource URL",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Resource URL did not expose sensitive query parameters or PII.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "reason_privacy_clean",
+      "title": "PII in reason strings",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Reason strings did not expose PII.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "metadata_secret_clean",
+      "title": "API keys in metadata",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Payment metadata did not expose API keys or bearer tokens.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "wallet_metadata_clean",
+      "title": "wallet-linked sensitive metadata",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Metadata did not link wallet identity to sensitive context.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "EXPECTED_APPROVED",
+      "code": "expected_approved",
+      "title": "policy decision allows a normal x402 payment",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "approved"
+      },
+      "explanation": "Payment passed Safe402 policy.",
+      "category": "policy"
+    },
+    {
+      "id": "EXPECTED_DENIED",
+      "code": "expected_denied",
+      "title": "policy decision blocks payment above per-call limit",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "denied"
+      },
+      "explanation": "Payment 0.25 exceeds per-call limit 0.1.",
+      "category": "policy"
+    },
+    {
+      "id": "EXPECTED_DENIED",
+      "code": "expected_denied",
+      "title": "policy decision blocks disallowed payment domain",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "denied"
+      },
+      "explanation": "Domain unknown.safe402.test is not in the allowed domain list.",
+      "category": "policy"
+    },
+    {
+      "id": "EXPECTED_DENIED",
+      "code": "expected_denied",
+      "title": "policy decision blocks unsupported payment network",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "denied"
+      },
+      "explanation": "Network base is not allowed.",
+      "category": "policy"
+    },
+    {
+      "id": "EXPECTED_DENIED",
+      "code": "expected_denied",
+      "title": "policy decision blocks unsupported payment asset",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "denied"
+      },
+      "explanation": "Asset DAI is not allowed.",
+      "category": "policy"
+    },
+    {
+      "id": "EXPECTED_DENIED",
+      "code": "expected_denied",
+      "title": "policy decision blocks unexpected payTo",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "denied"
+      },
+      "explanation": "Payee 0x1111111111111111111111111111111111111111 is not allowed.",
+      "category": "policy"
+    },
+    {
+      "id": "EXPECTED_APPROVAL_REQUIRED",
+      "code": "expected_approval_required",
+      "title": "policy decision requires approval above threshold",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "approval_required"
+      },
+      "explanation": "Payment requires human approval.",
+      "category": "policy"
+    },
+    {
+      "id": "EXPECTED_DENIED",
+      "code": "expected_denied",
+      "title": "policy decision blocks payment that exceeds daily budget",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "denied"
+      },
+      "explanation": "Payment would exceed daily budget 0.15.",
+      "category": "policy"
+    },
+    {
+      "id": "PAYMENT_IDENTIFIER_PRESENT",
+      "code": "payment_identifier_present",
+      "title": "payment-identifier support",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "paymentIdentifierPresent": true,
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Payment requirement includes a payment identifier.",
+      "category": "idempotency",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "IDEMPOTENCY_PRESENT",
+      "code": "idempotency_present",
+      "title": "idempotency support",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "idempotencyKeyPresent": true,
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Payment requirement includes an idempotency key.",
+      "category": "idempotency",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "IDENTIFIER_BINDING_PRESENT",
+      "code": "identifier_binding_present",
+      "title": "missing idempotency or payment-identifier support",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "At least one identifier is available for retry reconciliation.",
+      "category": "idempotency",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "PAYMENT_INTENT_STABLE",
+      "code": "payment_intent_fingerprint",
+      "title": "payment intent fingerprint stability",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "fingerprint": "fnv1a:af3f66c6",
+        "parts": {
+          "method": "POST",
+          "url": "https://api.safe402.test/paid",
+          "bodyHash": "fnv1a:f352f58f",
+          "amount": "10000",
+          "network": "base-sepolia",
+          "asset": "USDC",
+          "payTo": "0x0000000000000000000000000000000000000000"
+        },
+        "missing": [],
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Payment intent fingerprint covers method, URL, body hash, amount, network, asset, and payTo.",
+      "category": "payment_intent",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "PAYMENT_INTENT_STABLE",
+      "code": "agent_task_id_not_present",
+      "title": "agentTaskId intent binding",
+      "severity": "INFO",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "agentTaskId was not present; this is optional but useful for deeper agent payment attribution.",
+      "recommendation": "Include agentTaskId for agent-initiated paid actions when available.",
+      "category": "payment_intent",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "PAYMENT_INTENT_STABLE",
+      "code": "body_mutation_changes_intent",
+      "title": "method and body mutation risk",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "first": "fnv1a:eed3fe06",
+        "second": "fnv1a:dd497e6d"
+      },
+      "explanation": "Changing the request body changes the payment intent fingerprint.",
+      "category": "payment_intent"
+    },
+    {
+      "id": "PAYMENT_INTENT_STABLE",
+      "code": "mutated_retry_body_blocked",
+      "title": "method and body mutation risk runtime block",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "failed"
+      },
+      "explanation": "Request intent changed between the 402 challenge and paid retry.",
+      "category": "payment_intent"
+    },
+    {
+      "id": "DUPLICATE_PAYMENT_RISK",
+      "code": "duplicate_retry_blocked",
+      "title": "duplicate retry risk",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "firstDecision": "approved",
+        "secondDecision": "denied",
+        "duplicateKey": "https://api.safe402.test|/paid|base-sepolia|USDC|0x0000000000000000000000000000000000000000|10000",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "A repeated payment attempt for the same intent was blocked by duplicate detection.",
+      "category": "duplicate",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "PAYMENT_IDENTIFIER_PRESENT",
+      "code": "payment_identifier_present",
+      "title": "payment identifier duplicate binding",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "hasIdentifier": true,
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "The requirement includes a payment identifier or idempotency key that can bind duplicate retries.",
+      "category": "duplicate",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "PAYTO_STABLE",
+      "code": "pay_to_stable",
+      "title": "payTo changed across repeated challenges",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "value": "0x0000000000000000000000000000000000000000",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "payTo remained stable across repeated challenge requests.",
+      "category": "stability",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "AMOUNT_STABLE",
+      "code": "amount_stable",
+      "title": "amount changed across repeated challenges",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "value": "10000",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "amount remained stable across repeated challenge requests.",
+      "category": "stability",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "RESOURCE_STABLE",
+      "code": "resource_stable",
+      "title": "resource changed across repeated challenges",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "value": "https://api.safe402.test/paid",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "resource remained stable across repeated challenge requests.",
+      "category": "stability",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "CHALLENGE_REPEAT_STABLE",
+      "code": "challenge_repeat_stable",
+      "title": "repeated challenge stability",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "attempts": 3,
+        "errors": [],
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Repeated challenge requests returned parseable x402 requirements.",
+      "category": "stability",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "repeated_402_retry_fused",
+      "title": "retry loop risk: repeated 402s",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "failed",
+        "safe402Reason": "Paid fetch returned another 402; retry fuse stopped to avoid a payment loop."
+      },
+      "explanation": "Paid fetch returned another 402 and Safe402 stopped instead of retrying payment.",
+      "category": "retry"
+    },
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "permanent_error_not_retried",
+      "title": "retry loop risk: permanent error retried",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "paidFetchCalls": 1
+      },
+      "explanation": "A permanent paid-response error did not trigger repeated paid retries.",
+      "category": "retry"
+    },
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "chain_mismatch_not_paid",
+      "title": "retry loop risk: chain mismatch retried",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "paidFetchCalls": 0
+      },
+      "explanation": "Unsupported chain was denied before any paid retry.",
+      "category": "retry"
+    },
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "expired_challenge_not_paid",
+      "title": "retry loop risk: expired challenge retried",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "paidFetchCalls": 0
+      },
+      "explanation": "Expired challenge was denied before paid retry.",
+      "category": "retry"
+    },
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "facilitator_downtime_failed_closed",
+      "title": "retry loop risk: facilitator downtime retried",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "failed",
+        "safe402Reason": "Paid fetch failed: facilitator unavailable"
+      },
+      "explanation": "Facilitator downtime failed closed without repeated paid retries.",
+      "category": "retry"
+    },
+    {
+      "id": "PAYMENT_RESPONSE_PRESENT",
+      "code": "missing_payment_response_blocked",
+      "title": "missing PAYMENT-RESPONSE after paid path",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "failed",
+        "safe402Reason": "Paid response is missing PAYMENT-RESPONSE header."
+      },
+      "explanation": "Paid response without PAYMENT-RESPONSE was blocked.",
+      "category": "retry"
+    },
+    {
+      "id": "PAYMENT_RESPONSE_PRESENT",
+      "code": "x_payment_response_accepted",
+      "title": "missing X-PAYMENT-RESPONSE if applicable",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {},
+      "explanation": "X-PAYMENT-RESPONSE is accepted as receipt proof when present.",
+      "category": "retry"
+    },
+    {
+      "id": "PAID_BUT_DENIED_RISK",
+      "code": "paid_but_denied_blocked",
+      "title": "paid-but-denied risk analysis",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "failed",
+        "safe402Reason": "Paid response returned 403; possible paid-but-denied flow."
+      },
+      "explanation": "A denial response after payment was treated as a failed flow.",
+      "category": "retry"
+    }
+  ],
+  "summary": {
+    "total": 42,
+    "passed": 42,
+    "failed": 0,
+    "warnings": 0
+  },
+  "severitySummary": {
+    "PASS": 40,
+    "INFO": 2,
+    "WARN": 0,
+    "FAIL": 0,
+    "CRITICAL": 0
+  },
+  "recommendedFixes": [],
+  "profile": "standard",
+  "endpoints": [],
+  "note": "Safe402 Audit includes probe first, then evaluates x402 failure scenarios and does not silently expand paid scope.",
+  "targets": [],
+  "testMatrix": [
+    {
+      "category": "challenge",
+      "total": 8,
+      "passed": 8,
+      "warnings": 0,
+      "failed": 0,
+      "critical": 0
+    },
+    {
+      "category": "duplicate",
+      "total": 2,
+      "passed": 2,
+      "warnings": 0,
+      "failed": 0,
+      "critical": 0
+    },
+    {
+      "category": "idempotency",
+      "total": 3,
+      "passed": 3,
+      "warnings": 0,
+      "failed": 0,
+      "critical": 0
+    },
+    {
+      "category": "payment_intent",
+      "total": 4,
+      "passed": 4,
+      "warnings": 0,
+      "failed": 0,
+      "critical": 0
+    },
+    {
+      "category": "policy",
+      "total": 8,
+      "passed": 8,
+      "warnings": 0,
+      "failed": 0,
+      "critical": 0
+    },
+    {
+      "category": "privacy",
+      "total": 5,
+      "passed": 5,
+      "warnings": 0,
+      "failed": 0,
+      "critical": 0
+    },
+    {
+      "category": "retry",
+      "total": 8,
+      "passed": 8,
+      "warnings": 0,
+      "failed": 0,
+      "critical": 0
+    },
+    {
+      "category": "stability",
+      "total": 4,
+      "passed": 4,
+      "warnings": 0,
+      "failed": 0,
+      "critical": 0
+    }
+  ],
+  "individualChecks": [
+    {
+      "id": "VALID_402_CHALLENGE",
+      "code": "valid_x402_challenge",
+      "title": "valid 402 challenge structure",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "scheme": "exact",
+        "network": "base-sepolia",
+        "asset": "USDC",
+        "payTo": "0x0000000000000000000000000000000000000000",
+        "resource": "https://api.safe402.test/paid",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "The x402 challenge includes the core payment fields needed for policy evaluation.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "ACCEPTS_OPTIONS_PARSED",
+      "code": "single_accept",
+      "title": "multiple accepts handling",
+      "severity": "INFO",
+      "status": "pass",
+      "evidence": {
+        "accepts": 1,
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "The challenge exposes one payment option.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "HUMAN_MACHINE_PRICE_MATCH",
+      "code": "price_amount_consistent",
+      "title": "human price matches machine amount",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "amountUsd": 0.01,
+        "source": "maxAmountRequired",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "No human-readable price mismatch was detected.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "ASSET_DECIMALS_RESOLVED",
+      "code": "asset_decimals_resolved",
+      "title": "asset decimals ambiguity",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "assetDecimals": 6,
+        "decimalsSource": "known_asset",
+        "atomic": true,
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Asset decimals resolved to 6.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "HUMAN_PRICE_PRESENT",
+      "code": "human_price_present",
+      "title": "clear human-readable price",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "amountUsd": 0.01,
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "The challenge includes a human-readable price.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "CHAIN_ALLOWED",
+      "code": "supported_chain",
+      "title": "supported payment chain",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "network": "base-sepolia",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Network base-sepolia is acceptable for this audit policy.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "ASSET_ALLOWED",
+      "code": "supported_asset",
+      "title": "supported payment asset",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "asset": "USDC",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Asset USDC is acceptable for this audit policy.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "PAYTO_PRESENT",
+      "code": "expected_pay_to",
+      "title": "expected payTo recipient",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "payTo": "0x0000000000000000000000000000000000000000",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "payTo matches the audit policy allowlist.",
+      "category": "challenge",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "description_privacy_clean",
+      "title": "PII in description",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Description metadata did not expose PII.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "resource_privacy_clean",
+      "title": "PII in resource URL",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Resource URL did not expose sensitive query parameters or PII.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "reason_privacy_clean",
+      "title": "PII in reason strings",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Reason strings did not expose PII.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "metadata_secret_clean",
+      "title": "API keys in metadata",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Payment metadata did not expose API keys or bearer tokens.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "wallet_metadata_clean",
+      "title": "wallet-linked sensitive metadata",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Metadata did not link wallet identity to sensitive context.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "EXPECTED_APPROVED",
+      "code": "expected_approved",
+      "title": "policy decision allows a normal x402 payment",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "approved"
+      },
+      "explanation": "Payment passed Safe402 policy.",
+      "category": "policy"
+    },
+    {
+      "id": "EXPECTED_DENIED",
+      "code": "expected_denied",
+      "title": "policy decision blocks payment above per-call limit",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "denied"
+      },
+      "explanation": "Payment 0.25 exceeds per-call limit 0.1.",
+      "category": "policy"
+    },
+    {
+      "id": "EXPECTED_DENIED",
+      "code": "expected_denied",
+      "title": "policy decision blocks disallowed payment domain",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "denied"
+      },
+      "explanation": "Domain unknown.safe402.test is not in the allowed domain list.",
+      "category": "policy"
+    },
+    {
+      "id": "EXPECTED_DENIED",
+      "code": "expected_denied",
+      "title": "policy decision blocks unsupported payment network",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "denied"
+      },
+      "explanation": "Network base is not allowed.",
+      "category": "policy"
+    },
+    {
+      "id": "EXPECTED_DENIED",
+      "code": "expected_denied",
+      "title": "policy decision blocks unsupported payment asset",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "denied"
+      },
+      "explanation": "Asset DAI is not allowed.",
+      "category": "policy"
+    },
+    {
+      "id": "EXPECTED_DENIED",
+      "code": "expected_denied",
+      "title": "policy decision blocks unexpected payTo",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "denied"
+      },
+      "explanation": "Payee 0x1111111111111111111111111111111111111111 is not allowed.",
+      "category": "policy"
+    },
+    {
+      "id": "EXPECTED_APPROVAL_REQUIRED",
+      "code": "expected_approval_required",
+      "title": "policy decision requires approval above threshold",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "approval_required"
+      },
+      "explanation": "Payment requires human approval.",
+      "category": "policy"
+    },
+    {
+      "id": "EXPECTED_DENIED",
+      "code": "expected_denied",
+      "title": "policy decision blocks payment that exceeds daily budget",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "denied"
+      },
+      "explanation": "Payment would exceed daily budget 0.15.",
+      "category": "policy"
+    },
+    {
+      "id": "PAYMENT_IDENTIFIER_PRESENT",
+      "code": "payment_identifier_present",
+      "title": "payment-identifier support",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "paymentIdentifierPresent": true,
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Payment requirement includes a payment identifier.",
+      "category": "idempotency",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "IDEMPOTENCY_PRESENT",
+      "code": "idempotency_present",
+      "title": "idempotency support",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "idempotencyKeyPresent": true,
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Payment requirement includes an idempotency key.",
+      "category": "idempotency",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "IDENTIFIER_BINDING_PRESENT",
+      "code": "identifier_binding_present",
+      "title": "missing idempotency or payment-identifier support",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "At least one identifier is available for retry reconciliation.",
+      "category": "idempotency",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "PAYMENT_INTENT_STABLE",
+      "code": "payment_intent_fingerprint",
+      "title": "payment intent fingerprint stability",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "fingerprint": "fnv1a:af3f66c6",
+        "parts": {
+          "method": "POST",
+          "url": "https://api.safe402.test/paid",
+          "bodyHash": "fnv1a:f352f58f",
+          "amount": "10000",
+          "network": "base-sepolia",
+          "asset": "USDC",
+          "payTo": "0x0000000000000000000000000000000000000000"
+        },
+        "missing": [],
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Payment intent fingerprint covers method, URL, body hash, amount, network, asset, and payTo.",
+      "category": "payment_intent",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "PAYMENT_INTENT_STABLE",
+      "code": "agent_task_id_not_present",
+      "title": "agentTaskId intent binding",
+      "severity": "INFO",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "agentTaskId was not present; this is optional but useful for deeper agent payment attribution.",
+      "recommendation": "Include agentTaskId for agent-initiated paid actions when available.",
+      "category": "payment_intent",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "PAYMENT_INTENT_STABLE",
+      "code": "body_mutation_changes_intent",
+      "title": "method and body mutation risk",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "first": "fnv1a:eed3fe06",
+        "second": "fnv1a:dd497e6d"
+      },
+      "explanation": "Changing the request body changes the payment intent fingerprint.",
+      "category": "payment_intent"
+    },
+    {
+      "id": "PAYMENT_INTENT_STABLE",
+      "code": "mutated_retry_body_blocked",
+      "title": "method and body mutation risk runtime block",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "failed"
+      },
+      "explanation": "Request intent changed between the 402 challenge and paid retry.",
+      "category": "payment_intent"
+    },
+    {
+      "id": "DUPLICATE_PAYMENT_RISK",
+      "code": "duplicate_retry_blocked",
+      "title": "duplicate retry risk",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "firstDecision": "approved",
+        "secondDecision": "denied",
+        "duplicateKey": "https://api.safe402.test|/paid|base-sepolia|USDC|0x0000000000000000000000000000000000000000|10000",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "A repeated payment attempt for the same intent was blocked by duplicate detection.",
+      "category": "duplicate",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "PAYMENT_IDENTIFIER_PRESENT",
+      "code": "payment_identifier_present",
+      "title": "payment identifier duplicate binding",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "hasIdentifier": true,
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "The requirement includes a payment identifier or idempotency key that can bind duplicate retries.",
+      "category": "duplicate",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "PAYTO_STABLE",
+      "code": "pay_to_stable",
+      "title": "payTo changed across repeated challenges",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "value": "0x0000000000000000000000000000000000000000",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "payTo remained stable across repeated challenge requests.",
+      "category": "stability",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "AMOUNT_STABLE",
+      "code": "amount_stable",
+      "title": "amount changed across repeated challenges",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "value": "10000",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "amount remained stable across repeated challenge requests.",
+      "category": "stability",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "RESOURCE_STABLE",
+      "code": "resource_stable",
+      "title": "resource changed across repeated challenges",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "value": "https://api.safe402.test/paid",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "resource remained stable across repeated challenge requests.",
+      "category": "stability",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "CHALLENGE_REPEAT_STABLE",
+      "code": "challenge_repeat_stable",
+      "title": "repeated challenge stability",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "attempts": 3,
+        "errors": [],
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Repeated challenge requests returned parseable x402 requirements.",
+      "category": "stability",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "repeated_402_retry_fused",
+      "title": "retry loop risk: repeated 402s",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "failed",
+        "safe402Reason": "Paid fetch returned another 402; retry fuse stopped to avoid a payment loop."
+      },
+      "explanation": "Paid fetch returned another 402 and Safe402 stopped instead of retrying payment.",
+      "category": "retry"
+    },
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "permanent_error_not_retried",
+      "title": "retry loop risk: permanent error retried",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "paidFetchCalls": 1
+      },
+      "explanation": "A permanent paid-response error did not trigger repeated paid retries.",
+      "category": "retry"
+    },
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "chain_mismatch_not_paid",
+      "title": "retry loop risk: chain mismatch retried",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "paidFetchCalls": 0
+      },
+      "explanation": "Unsupported chain was denied before any paid retry.",
+      "category": "retry"
+    },
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "expired_challenge_not_paid",
+      "title": "retry loop risk: expired challenge retried",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "paidFetchCalls": 0
+      },
+      "explanation": "Expired challenge was denied before paid retry.",
+      "category": "retry"
+    },
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "facilitator_downtime_failed_closed",
+      "title": "retry loop risk: facilitator downtime retried",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "failed",
+        "safe402Reason": "Paid fetch failed: facilitator unavailable"
+      },
+      "explanation": "Facilitator downtime failed closed without repeated paid retries.",
+      "category": "retry"
+    },
+    {
+      "id": "PAYMENT_RESPONSE_PRESENT",
+      "code": "missing_payment_response_blocked",
+      "title": "missing PAYMENT-RESPONSE after paid path",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "failed",
+        "safe402Reason": "Paid response is missing PAYMENT-RESPONSE header."
+      },
+      "explanation": "Paid response without PAYMENT-RESPONSE was blocked.",
+      "category": "retry"
+    },
+    {
+      "id": "PAYMENT_RESPONSE_PRESENT",
+      "code": "x_payment_response_accepted",
+      "title": "missing X-PAYMENT-RESPONSE if applicable",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {},
+      "explanation": "X-PAYMENT-RESPONSE is accepted as receipt proof when present.",
+      "category": "retry"
+    },
+    {
+      "id": "PAID_BUT_DENIED_RISK",
+      "code": "paid_but_denied_blocked",
+      "title": "paid-but-denied risk analysis",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "failed",
+        "safe402Reason": "Paid response returned 403; possible paid-but-denied flow."
+      },
+      "explanation": "A denial response after payment was treated as a failed flow.",
+      "category": "retry"
+    }
+  ],
+  "paymentIntentFingerprint": "fnv1a:af3f66c6",
+  "repeatedChallengeStabilityResults": [
+    {
+      "id": "PAYTO_STABLE",
+      "code": "pay_to_stable",
+      "title": "payTo changed across repeated challenges",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "value": "0x0000000000000000000000000000000000000000",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "payTo remained stable across repeated challenge requests.",
+      "category": "stability",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "AMOUNT_STABLE",
+      "code": "amount_stable",
+      "title": "amount changed across repeated challenges",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "value": "10000",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "amount remained stable across repeated challenge requests.",
+      "category": "stability",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "RESOURCE_STABLE",
+      "code": "resource_stable",
+      "title": "resource changed across repeated challenges",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "value": "https://api.safe402.test/paid",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "resource remained stable across repeated challenge requests.",
+      "category": "stability",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "CHALLENGE_REPEAT_STABLE",
+      "code": "challenge_repeat_stable",
+      "title": "repeated challenge stability",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "attempts": 3,
+        "errors": [],
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Repeated challenge requests returned parseable x402 requirements.",
+      "category": "stability",
+      "endpoint": "https://api.safe402.test/paid"
+    }
+  ],
+  "retryLoopSimulationResults": [
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "repeated_402_retry_fused",
+      "title": "retry loop risk: repeated 402s",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "failed",
+        "safe402Reason": "Paid fetch returned another 402; retry fuse stopped to avoid a payment loop."
+      },
+      "explanation": "Paid fetch returned another 402 and Safe402 stopped instead of retrying payment.",
+      "category": "retry"
+    },
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "permanent_error_not_retried",
+      "title": "retry loop risk: permanent error retried",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "paidFetchCalls": 1
+      },
+      "explanation": "A permanent paid-response error did not trigger repeated paid retries.",
+      "category": "retry"
+    },
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "chain_mismatch_not_paid",
+      "title": "retry loop risk: chain mismatch retried",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "paidFetchCalls": 0
+      },
+      "explanation": "Unsupported chain was denied before any paid retry.",
+      "category": "retry"
+    },
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "expired_challenge_not_paid",
+      "title": "retry loop risk: expired challenge retried",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "paidFetchCalls": 0
+      },
+      "explanation": "Expired challenge was denied before paid retry.",
+      "category": "retry"
+    },
+    {
+      "id": "RETRY_LOOP_RISK",
+      "code": "facilitator_downtime_failed_closed",
+      "title": "retry loop risk: facilitator downtime retried",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "failed",
+        "safe402Reason": "Paid fetch failed: facilitator unavailable"
+      },
+      "explanation": "Facilitator downtime failed closed without repeated paid retries.",
+      "category": "retry"
+    },
+    {
+      "id": "PAYMENT_RESPONSE_PRESENT",
+      "code": "missing_payment_response_blocked",
+      "title": "missing PAYMENT-RESPONSE after paid path",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "failed",
+        "safe402Reason": "Paid response is missing PAYMENT-RESPONSE header."
+      },
+      "explanation": "Paid response without PAYMENT-RESPONSE was blocked.",
+      "category": "retry"
+    },
+    {
+      "id": "PAYMENT_RESPONSE_PRESENT",
+      "code": "x_payment_response_accepted",
+      "title": "missing X-PAYMENT-RESPONSE if applicable",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {},
+      "explanation": "X-PAYMENT-RESPONSE is accepted as receipt proof when present.",
+      "category": "retry"
+    },
+    {
+      "id": "PAID_BUT_DENIED_RISK",
+      "code": "paid_but_denied_blocked",
+      "title": "paid-but-denied risk analysis",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "decision": "failed",
+        "safe402Reason": "Paid response returned 403; possible paid-but-denied flow."
+      },
+      "explanation": "A denial response after payment was treated as a failed flow.",
+      "category": "retry"
+    }
+  ],
+  "duplicatePaymentSimulationResults": [
+    {
+      "id": "DUPLICATE_PAYMENT_RISK",
+      "code": "duplicate_retry_blocked",
+      "title": "duplicate retry risk",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "firstDecision": "approved",
+        "secondDecision": "denied",
+        "duplicateKey": "https://api.safe402.test|/paid|base-sepolia|USDC|0x0000000000000000000000000000000000000000|10000",
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "A repeated payment attempt for the same intent was blocked by duplicate detection.",
+      "category": "duplicate",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "PAYMENT_IDENTIFIER_PRESENT",
+      "code": "payment_identifier_present",
+      "title": "payment identifier duplicate binding",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "hasIdentifier": true,
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "The requirement includes a payment identifier or idempotency key that can bind duplicate retries.",
+      "category": "duplicate",
+      "endpoint": "https://api.safe402.test/paid"
+    }
+  ],
+  "metadataAndPrivacyFindings": [
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "description_privacy_clean",
+      "title": "PII in description",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Description metadata did not expose PII.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "resource_privacy_clean",
+      "title": "PII in resource URL",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Resource URL did not expose sensitive query parameters or PII.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "reason_privacy_clean",
+      "title": "PII in reason strings",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Reason strings did not expose PII.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "metadata_secret_clean",
+      "title": "API keys in metadata",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Payment metadata did not expose API keys or bearer tokens.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    },
+    {
+      "id": "NO_PII_IN_METADATA",
+      "code": "wallet_metadata_clean",
+      "title": "wallet-linked sensitive metadata",
+      "severity": "PASS",
+      "status": "pass",
+      "evidence": {
+        "endpoint": "https://api.safe402.test/paid"
+      },
+      "explanation": "Metadata did not link wallet identity to sensitive context.",
+      "category": "privacy",
+      "endpoint": "https://api.safe402.test/paid"
+    }
+  ],
+  "mcpFindings": [],
+  "finalVerdict": "SAFE_TO_PAY",
+  "remediationChecklist": [],
+  "ciStatus": "pass"
+}

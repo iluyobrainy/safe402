@@ -44,9 +44,9 @@ const commandScenarios: CommandScenario[] = [
   {
     id: "probe",
     label: "Probe",
-    command: "npx safe402 probe --url https://api.example.com/paid-data",
+    command: "npx safe402 probe https://api.example.com/paid-data",
     output: [
-      "Safe402 probe",
+      "Safe402 Probe: $0.01 per endpoint check",
       "Checks: 2 passed, 0 failed, 0 warnings",
       "decision: APPROVED",
       "[pass] endpoint policy check",
@@ -57,16 +57,19 @@ const commandScenarios: CommandScenario[] = [
   {
     id: "audit",
     label: "Audit",
-    command: "npx safe402 audit",
+    command: "npx safe402 audit https://api.example.com/paid-data --profile standard",
     output: [
-      "Safe402 audit",
-      "Checks: 14 passed, 0 failed, 0 warnings",
-      "[pass] blocks changed recipient address",
-      "[pass] blocks mutated retry body",
-      "[pass] blocks missing PAYMENT-RESPONSE header",
-      "[pass] blocks paid-but-denied responses",
-      "[pass] blocks duplicate payment replay",
-      "[pass] fingerprints payment intent"
+      "Safe402 audit quote",
+      "Profile: standard",
+      "Total: $2.50",
+      "Verdict: SAFE_TO_PAY",
+      "Severity: PASS 40, INFO 2, WARN 0, FAIL 0, CRITICAL 0",
+      "[PASS] valid 402 challenge structure",
+      "[PASS] payTo changed across repeated challenges",
+      "[PASS] amount changed across repeated challenges",
+      "[PASS] retry loop risk: repeated 402s",
+      "[PASS] missing PAYMENT-RESPONSE after paid path",
+      "[PASS] duplicate retry risk"
     ],
     expectation: "Audit before shipping: simulate payment-flow failures before any x402 flow goes public."
   },

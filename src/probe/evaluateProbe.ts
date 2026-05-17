@@ -269,11 +269,12 @@ function explainOption(input: {
   }
 
   if (input.category === "BLOCKED_BY_POLICY") {
-    const limit = input.policy.maxPaymentUsd !== undefined
-      ? ` Your max auto-spend is $${formatAmount(input.policy.maxPaymentUsd)}.`
-      : "";
+    if (input.policy.maxPaymentUsd !== undefined && input.amountUsd > input.policy.maxPaymentUsd) {
+      return `Blocked by policy. Endpoint requested $${formatAmount(input.amountUsd)}, but your max auto-spend is $${formatAmount(input.policy.maxPaymentUsd)}. This does not mean the provider is malicious.`;
+    }
+
     const reason = input.reasons[0] ? ` ${input.reasons[0]}` : "";
-    return `${requested}${limit} Blocked by your policy, not necessarily provider fault.${reason}`;
+    return `Blocked by policy. Endpoint requested $${formatAmount(input.amountUsd)}, but your Safe402 policy does not allow this payment. This does not mean the provider is malicious.${reason}`;
   }
 
   if (input.category === "SUSPICIOUS") {

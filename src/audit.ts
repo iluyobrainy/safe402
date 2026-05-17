@@ -1,6 +1,8 @@
 export {
   createSafe402Audit,
+  formatAuditQuote,
   formatAuditReport,
+  includedChecksForProfile,
   quoteAudit,
   runAudit,
   runSafe402Audit,
@@ -8,7 +10,15 @@ export {
   type Safe402AuditCase,
   type Safe402AuditCheck,
   type Safe402AuditOptions,
+  type Safe402AuditProfile,
   type Safe402AuditQuote,
+  type Safe402AuditQuoteLineItem,
+  type Safe402AuditQuoteOptions,
   type Safe402AuditReport,
-  type Safe402AuditStatus
+  type Safe402AuditSeverity,
+  type Safe402AuditSeveritySummary,
+  type Safe402AuditStatus,
+  type Safe402AuditVerdict,
+  type Safe402McpAuditManifest,
+  type Safe402McpAuditTool
 } from "./audit/index.js";

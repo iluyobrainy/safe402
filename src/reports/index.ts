@@ -53,3 +53,33 @@ export function formatCheckReport(title: string, checks: Safe402ReportCheck[]): 
 
   return lines.join("\n");
 }
+
+export {
+  createAuditJsonReport,
+  createJsonReport,
+  createProbeJsonReport,
+  blockedByPolicyLanguage,
+  finalProbeRecommendation,
+  type Safe402AuditJsonReport,
+  type Safe402JsonAcceptsOption,
+  type Safe402JsonAuditCheck,
+  type Safe402JsonAuditTestMatrixEntry,
+  type Safe402JsonPolicyDecision,
+  type Safe402JsonProbeBilling,
+  type Safe402JsonReportOptions,
+  type Safe402JsonSuspiciousFinding,
+  type Safe402ProbeJsonReport,
+  type Safe402ReportJson
+} from "./jsonReport.js";
+
+export {
+  formatAuditMarkdownReport,
+  formatMarkdownReport,
+  formatProbeMarkdownReport
+} from "./markdownReport.js";
+
+export {
+  formatAuditConsoleReport,
+  formatConsoleReport,
+  formatProbeConsoleReport
+} from "./consoleReport.js";

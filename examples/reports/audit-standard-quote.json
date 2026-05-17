@@ -1,0 +1,45 @@
+{
+  "kind": "audit_quote",
+  "profile": "standard",
+  "quoteBased": false,
+  "endpointsCount": 1,
+  "requestVariantsCount": 0,
+  "mcpScanEnabled": false,
+  "mcpServersCount": 0,
+  "hostedReportEnabled": false,
+  "totalUsd": 2.5,
+  "minimumUsd": 0.5,
+  "priceBreakdown": [
+    {
+      "label": "standard audit endpoint",
+      "unitUsd": 2.5,
+      "quantity": 1,
+      "totalUsd": 2.5
+    }
+  ],
+  "includedChecks": [
+    "full probe",
+    "valid 402 challenge structure",
+    "multiple accepts handling",
+    "policy decision",
+    "human-readable price vs machine-readable amount mismatch",
+    "asset decimals ambiguity check",
+    "unsupported chain and unsupported asset check",
+    "unexpected payTo check",
+    "metadata privacy check for descriptions, resources, reasons, API keys, and wallet-linked data",
+    "basic Markdown and JSON report",
+    "repeated challenge stability test",
+    "payTo mutation check",
+    "amount mutation check",
+    "resource mutation check",
+    "method and body mutation risk",
+    "duplicate retry simulation",
+    "retry-loop dry-run",
+    "payment intent fingerprint analysis for method, URL, body hash, amount, network, asset, payTo, and agentTaskId",
+    "idempotency and payment-identifier check",
+    "missing PAYMENT-RESPONSE and X-PAYMENT-RESPONSE handling",
+    "deeper report with recommended fixes"
+  ],
+  "warnings": [],
+  "note": "Safe402 calculates the audit quote before running checks. Extra scope discovered later must return ADDITIONAL_PAYMENT_REQUIRED instead of silently overcharging."
+}

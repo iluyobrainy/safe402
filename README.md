@@ -1,257 +1,295 @@
 # Safe402
 
-Safe402 makes x402 payments shippable.
+Safe402 checks x402 payment requests before your agent signs.
 
-It is a local-first audit and runtime safety kit for developers building x402-powered agents, APIs, MCP tools, and payment flows. It is not a payment proxy, facilitator, hosted spend dashboard, wallet, or marketplace.
-
-Use Safe402 before launch to test whether an x402 implementation is safe, private, reliable, and production-ready. Use it at runtime as a fuse around paid fetch calls.
+It is a preflight probe and audit toolkit for developers building, integrating, or buying x402-powered agents, APIs, and MCP tools. Safe402 helps answer the question that matters before money moves: what is this endpoint asking my agent to pay, and does the payment flow behave safely enough to trust?
 
 ```bash
-npx safe402 probe --url https://api.example.com/paid-data
+npx safe402 probe https://another-agent.com/paid-tool
 ```
 
 ```bash
-npx safe402 audit
-```
-
-```ts
-const safeFetch = createSafe402Fetch({
-  paidFetch,
-  policy,
-  receipts
-});
+npx safe402 audit https://my-agent.com/x402/tool --profile standard
 ```
 
 ## What Safe402 Is
 
-Safe402 is the preflight and runtime safety layer for x402 agent payments.
+Safe402 is a safety layer for x402 payment flows.
 
-It helps developers catch:
+It can:
 
-- 402 retry loops
-- duplicate payments
-- wrong chain, asset, domain, or recipient
-- overpricing attacks
-- changed payment intent
-- mutated retry bodies
-- paid-but-denied responses
-- missing `PAYMENT-RESPONSE` headers
-- PII or secrets in payment metadata
-- broken MCP paid-tool flows
-- mismatches between what was paid for and what was delivered
-
-## Probe vs Audit
-
-Probe and audit are intentionally separate.
-
-Probe answers: what is this endpoint asking my agent to pay, and does it match my policy?
-
-Audit answers: can this x402 payment flow behave safely under real-world failure scenarios?
-
-Use `safe402 probe` when you want to inspect an x402 endpoint before paying it. A probe performs an unpaid request, extracts the payment requirement, evaluates policy, and scans payment metadata for obvious privacy leaks.
-
-Use `safe402 audit` when you want shipping confidence before integrating or publishing an x402 flow. An audit runs built-in and custom safety cases for retry loops, duplicate replay, budget exhaustion, mutated retries, missing receipt headers, paid-but-denied responses, and related failure modes.
+- inspect an x402 payment challenge before payment
+- evaluate every `accepts` option against policy
+- detect unsupported chains, unsupported assets, unexpected payees, and amount ambiguity
+- scan x402 metadata for PII, API keys, secrets, and sensitive task context
+- quote and run deeper audits for retry loops, payment mutation, duplicate payment risk, missing identifiers, and MCP paid-tool issues
+- return console, JSON, and Markdown reports for local use and CI
 
 ## What Safe402 Is Not
 
-Safe402 does not try to replace x402 infrastructure.
+Safe402 is not a wallet, facilitator, or payment marketplace.
 
-It is not:
+It does not custody funds, create wallets, settle payments, replace your facilitator, or guarantee that a provider is honest. Bring your own wallet, x402 client, facilitator, and payment infrastructure. Safe402 checks the payment request and the surrounding flow.
 
-- a payment proxy
-- a facilitator
-- a wallet
-- a custody layer
-- a hosted spend dashboard
-- a marketplace
-- an agent framework
-- an x402 platform competitor
+## Core Products
 
-Bring your existing wallet, facilitator, x402 client, or platform. Safe402 wraps the dangerous edges around the flow.
+### Probe
+
+Probe checks what an endpoint wants your agent to pay.
+
+`safe402 probe` makes an unpaid request, captures the x402 `402 Payment Required` challenge, parses payment requirements from headers or body, evaluates every `accepts` option, selects the best compatible rail, and reports whether the request matches your policy.
+
+Probe does not sign or send funds.
+
+```bash
+safe402 probe https://api.example.com/paid
+```
+
+### Audit
+
+Audit stress-tests an x402 payment flow before launch or integration.
+
+Audit includes probe as the first step, then checks failure scenarios such as changed `payTo`, changed amount, changed resource, retry loops, duplicate payment risk, missing `payment-identifier`, missing receipt proof, privacy leaks, facilitator risk, paid-but-denied risk, unpaid-service risk, and MCP paid-tool mismatch.
+
+```bash
+safe402 audit https://api.example.com/paid --profile standard
+```
+
+## Buyer-Side Usage
+
+A developer can probe or audit another agent or API before paying.
+
+```bash
+safe402 probe https://another-agent.com/paid-tool
+```
+
+```bash
+safe402 audit https://another-agent.com/paid-tool --profile basic
+```
+
+Use this when your agent is about to integrate deeply with another paid agent, API, or MCP tool and you want to know what payment data it will ask your wallet to sign.
+
+## Provider-Side Usage
+
+A developer can probe or audit their own endpoint before launch.
+
+```bash
+safe402 audit https://my-agent.com/x402/tool --profile standard
+```
+
+Use this before shipping a paid endpoint so you can catch unstable payment challenges, unclear prices, metadata leaks, broken receipt headers, or retry behavior that could make buyers afraid to autopay.
 
 ## Install
 
-Install from GitHub today:
+Install the CLI globally:
 
 ```bash
-npm install github:iluyobrainy/safe402
+npm install --global safe402
 ```
 
-Or, if you want the dependency key to look exactly like `safe402` before the npm registry publish:
+Or run it directly with `npx`:
 
 ```bash
-npm install safe402@github:iluyobrainy/safe402
+npx safe402 probe https://api.example.com/paid
 ```
 
-After the first npm registry publish:
+Safe402 expects Node.js 20 or newer.
+
+## Pricing
+
+Probe:
+
+- $0.01 per endpoint check
+
+Audit:
+
+| Profile | Price |
+| --- | ---: |
+| Basic | $0.50 per endpoint |
+| Standard | $2.50 per endpoint |
+| Deep | $5.00 per endpoint |
+| Custom | quote-based |
+
+Audit starts at $0.50 and increases based on audit scope because endpoint count, request variants, MCP checks, hosted reports, and audit depth can change how much analysis is required.
+
+Audit add-ons currently include:
+
+| Add-on | Price |
+| --- | ---: |
+| Additional request variant | $0.25 each |
+| MCP tool manifest scan | $1.00 per MCP server |
+| CI signed hosted report | $1.00 per report |
+
+Show current pricing:
 
 ```bash
-npm install safe402
+safe402 pricing
 ```
 
-Safe402 expects Node.js 20 or newer for the CLI and Node-specific helpers.
-
-## Probe CLI
-
-Probe a live x402 endpoint before paying it:
-
-```bash
-npx safe402 probe --url https://api.example.com/paid-data
-```
-
-This performs an unpaid preflight request. It does not sign, settle, or retry a paid request.
-
-Probe captures `402 Payment Required` challenges from `PAYMENT-REQUIRED`, `X-PAYMENT-REQUIRED`, `WWW-Authenticate`, and body-based `accepts` arrays. It evaluates every accepts option, normalizes the payment fields, selects the best compatible option, and returns all blocked options with the reason each one failed policy.
-
-Probe with config:
-
-```bash
-npx safe402 probe --config safe402.config.json
-```
-
-Machine-readable output:
-
-```bash
-npx safe402 probe --url https://api.example.com/paid-data --json
-```
-
-Markdown output:
-
-```bash
-npx safe402 probe --url https://api.example.com/paid-data --markdown
-```
-
-Probe decision categories:
-
-| Category | Meaning |
-| --- | --- |
-| `APPROVED` | A compatible option matches policy and has no suspicious findings. |
-| `NEEDS_APPROVAL` | A compatible option is above the configured approval threshold. |
-| `BLOCKED_BY_POLICY` | No compatible option matches the configured policy. |
-| `SUSPICIOUS` | The requirement has amount ambiguity or privacy-sensitive metadata. |
-| `INVALID_X402` | The endpoint did not return a valid x402 challenge. |
-| `FREE_OR_NOT_GATED` | The endpoint returned a normal success response without x402. |
-| `UNREACHABLE` | The endpoint could not be reached or was unavailable. |
-
-Probe checks for amount ambiguity such as human-readable price text disagreeing with `maxAmountRequired`, unclear asset decimals, explicit `amountUsd` mismatch, and suspiciously low or high amounts. It also scans payment metadata for emails, phone numbers, API keys, bearer tokens, sensitive query params, private task reasons, wallet-linked notes, and personal identifiers.
-
-## Audit CLI
-
-Run the built-in safety checks:
-
-```bash
-npx safe402 audit
-```
-
-Example output:
+## Example Probe Output
 
 ```text
-Safe402 audit
-Checks: 14 passed, 0 failed, 0 warnings
-
-[pass] stops paid 402 retry loops - Paid fetch returned another 402; retry fuse stopped to avoid a payment loop.
-[pass] blocks changed recipient address - Payee 0x1111...1111 is not allowed.
-[pass] blocks mutated retry body - Request intent changed between the 402 challenge and paid retry.
-[pass] blocks missing PAYMENT-RESPONSE header - Paid response is missing PAYMENT-RESPONSE header.
-[pass] blocks paid-but-denied responses - Paid response returned 403; possible paid-but-denied flow.
-[pass] fingerprints payment intent - Different request bodies produce different payment intent fingerprints.
+Decision: BLOCKED_BY_POLICY
+Endpoint requested: $2.00
+Your max auto-spend: $0.25
+Reason: Price exceeds wallet policy.
+Note: This does not mean the provider is malicious.
 ```
 
-The audit prints pass, fail, warning, reason, and fix guidance. It exits with code `1` when checks fail, so it can run in CI.
+`BLOCKED_BY_POLICY` means the payment does not match your configured policy. It does not mean the endpoint is malicious.
 
-Audit with config:
+## Example Audit Output
+
+```text
+FAIL: payTo changed between challenge requests
+WARN: missing payment-identifier
+PASS: amount stable
+PASS: no PII in metadata
+Verdict: NOT_SAFE_TO_AUTOPAY
+```
+
+Audit uses stronger language only when there is actual payment-flow risk, such as changed recipient, changed amount, chain mismatch, missing payment response, duplicate payment risk, retry-loop risk, metadata leaks, invalid x402, or paid-but-denied behavior.
+
+Generated JSON and Markdown examples live in `examples/reports/`. Regenerate them with:
 
 ```bash
-npx safe402 audit --config safe402.config.json
+npm run examples:reports
 ```
 
-Example config:
+## Policy File
+
+Create a default policy:
+
+```bash
+safe402 policy init
+```
+
+Example `safe402.policy.json`:
 
 ```json
 {
-  "policy": {
-    "maxPaymentUsd": 0.1,
-    "dailyBudgetUsd": 5,
-    "allowedDomains": ["api.example.com"],
-    "allowedNetworks": ["base-sepolia"],
-    "allowedAssets": ["USDC"],
-    "allowedPayees": ["0x0000000000000000000000000000000000000000"],
-    "blockedPayees": [],
-    "blockSensitiveMetadata": true,
-    "blockPaymentIntentChanges": true,
-    "requirePaymentResponseHeader": true
-  },
-  "probe": {
-    "endpoints": ["https://api.example.com/paid-data"]
-  },
-  "audit": {
-    "cases": [
-      {
-        "name": "example endpoint should pass policy",
-        "url": "https://api.example.com/paid-data",
-        "expect": "approved",
-        "requirement": {
-          "scheme": "exact",
-          "network": "base-sepolia",
-          "asset": "USDC",
-          "payTo": "0x0000000000000000000000000000000000000000",
-          "maxAmountRequired": "10000",
-          "resource": "https://api.example.com/paid-data"
-        }
-      }
-    ]
-  }
+  "maxPaymentUsd": 0.25,
+  "dailyBudgetUsd": 10,
+  "allowedDomains": ["api.example.com", "another-agent.com"],
+  "allowedNetworks": ["base", "base-sepolia"],
+  "allowedAssets": ["USDC"],
+  "allowedPayees": ["0x0000000000000000000000000000000000000000"],
+  "requireApprovalAboveUsd": 1,
+  "blockSensitiveMetadata": true,
+  "blockPaymentIntentChanges": true,
+  "requirePaymentResponseHeader": true,
+  "duplicateWindowMs": 1800000
 }
 ```
 
-Machine-readable output:
+Run probe or audit with a policy:
 
 ```bash
-npx safe402 audit --json
+safe402 probe https://api.example.com/paid --policy safe402.policy.json
 ```
-
-## Demo Agent
-
-Safe402 includes a local demo agent that tries both safe and unsafe x402 payment flows.
 
 ```bash
-git clone https://github.com/iluyobrainy/safe402.git
-cd safe402
-npm install
-npm run demo:agent
+safe402 audit https://api.example.com/paid --profile standard --policy safe402.policy.json
 ```
 
-The demo agent simulates:
+## Billing Modes
 
-- a free resource
-- a valid paid resource
-- a duplicate replay
-- an overpriced tool
-- a changed recipient address
-- leaked metadata
-- a repeated `402` retry loop
-- a paid response without `PAYMENT-RESPONSE`
-- a paid-but-denied `403` response
+Safe402 supports three billing modes:
 
-Expected result:
-
-```text
-Safe402 demo agent result
-
-Free resource             allowed
-Good paid resource        paid
-Duplicate replay          blocked
-Overpriced tool           blocked
-Wrong recipient           blocked
-Metadata leak             blocked
-Retry loop                blocked
-Missing receipt header    blocked
-Paid but denied           blocked
+```bash
+SAFE402_BILLING_MODE=disabled
 ```
 
-## Runtime Safety Wrapper
+`disabled` shows prices but does not require payment. This is the default for local development and open-source testing.
 
-Use `createSafe402Fetch()` where your agent would normally call an x402-aware paid fetch.
+```bash
+SAFE402_BILLING_MODE=mock
+```
+
+`mock` simulates payment and creates mock receipts so billing-gated flows can be tested locally.
+
+```bash
+SAFE402_BILLING_MODE=x402
+```
+
+`x402` is the paid billing mode. Safe402 calculates the exact probe or audit quote, requests payment to the configured Safe402 `payTo`, verifies the payment proof, saves a receipt, and attaches that receipt to the report.
+
+Billing environment variables:
+
+| Variable | Values |
+| --- | --- |
+| `SAFE402_BILLING_MODE` | `disabled`, `mock`, or `x402` |
+| `SAFE402_BILLING_PAY_TO` | Safe402 collection wallet address |
+| `SAFE402_BILLING_NETWORK` | `base` or `base-sepolia` |
+| `SAFE402_BILLING_ASSET` | `USDC` or a USDC token address |
+| `SAFE402_BILLING_FACILITATOR_URL` | Optional facilitator URL |
+| `SAFE402_BILLING_RECEIPT_STORE` | `memory` or `file` |
+| `SAFE402_BILLING_RECEIPT_FILE` | Defaults to `safe402-receipts.json` |
+
+Do not hardcode private keys or commit env files.
+
+## JSON Output
+
+Probe JSON:
+
+```bash
+safe402 probe https://api.example.com/paid --json
+```
+
+Audit JSON:
+
+```bash
+safe402 audit https://api.example.com/paid --profile standard --json
+```
+
+JSON reports include the target, method, selected payment requirement, policy decision, privacy and suspicious findings, pricing, billing receipt when available, and final recommendation.
+
+## CI Usage
+
+Run audit in CI with a standard profile and critical-only failure policy:
+
+```bash
+safe402 audit https://api.example.com/paid --profile standard --ci --fail-on critical
+```
+
+For stricter CI, use JSON output and fail the job when the audit verdict is `NOT_SAFE_TO_AUTOPAY`, `INVALID_X402`, or `INCONCLUSIVE`:
+
+```bash
+safe402 audit https://api.example.com/paid --profile standard --json
+```
+
+Probe can also run in CI:
+
+```bash
+safe402 probe https://api.example.com/paid --ci --json
+```
+
+## Audit Quotes
+
+Audit calculates a quote before checks run:
+
+```bash
+safe402 audit quote https://api.example.com/paid --profile standard --json
+```
+
+Example quote fields:
+
+```json
+{
+  "profile": "standard",
+  "endpointsCount": 1,
+  "requestVariantsCount": 0,
+  "mcpScanEnabled": false,
+  "hostedReportEnabled": false,
+  "totalUsd": 2.5
+}
+```
+
+If audit discovers extra paid scope during execution, it does not silently overcharge. It returns `ADDITIONAL_PAYMENT_REQUIRED` with the extra checks and amount.
+
+## Runtime Wrapper
+
+Safe402 can also wrap an x402-aware paid fetch client:
 
 ```ts
 import { createMemoryReceiptStore, createSafe402Fetch } from "safe402";
@@ -265,274 +303,59 @@ const safeFetch = createSafe402Fetch({
   paidFetch,
   receipts,
   policy: {
-    maxPaymentUsd: 0.1,
-    dailyBudgetUsd: 5,
-    allowedDomains: ["api.example.com"],
+    maxPaymentUsd: 0.25,
+    dailyBudgetUsd: 10,
     allowedNetworks: ["base-sepolia"],
     allowedAssets: ["USDC"],
-    allowedPayTo: ["0x0000000000000000000000000000000000000000"],
     blockSensitiveMetadata: true,
     blockPaymentIntentChanges: true,
-    requirePaymentResponseHeader: true,
-    duplicateWindowMs: 30 * 60 * 1000
+    requirePaymentResponseHeader: true
   }
 });
 
-const response = await safeFetch("https://api.example.com/paid-data");
+const response = await safeFetch("https://api.example.com/paid");
 ```
-
-## Runtime Flow
-
-1. Your agent calls `safeFetch(url)`.
-2. Safe402 records the request intent fingerprint.
-3. Safe402 makes the initial unpaid request.
-4. If the response is not `402 Payment Required`, Safe402 returns it.
-5. If the response is `402`, Safe402 extracts the payment requirement.
-6. Safe402 checks amount, domain, network, asset, payee, metadata, budget, receipts, and duplicate history.
-7. If approval is required, Safe402 calls your `onApprovalRequired` callback.
-8. Before payment, Safe402 checks whether the request intent changed.
-9. If allowed, Safe402 calls your existing x402 `paidFetch`.
-10. Safe402 fails repeated `402`, missing payment receipt headers, and paid-but-denied responses.
-11. Safe402 records the decision and receipt in your configured store.
-
-## Policy Fields
-
-| Field | What it does |
-| --- | --- |
-| `maxPaymentUsd` | Maximum allowed payment for a single request. |
-| `dailyBudgetUsd` | Maximum total paid amount per UTC day, calculated from receipts. |
-| `allowedDomains` | Only these domains can be paid. |
-| `blockedDomains` | These domains are always blocked. |
-| `allowedNetworks` | Only these x402 networks can be used. |
-| `allowedAssets` | Only these payment assets can be used. |
-| `allowedPayees` | Only these recipient addresses can be paid. |
-| `blockedPayees` | These recipient addresses are always blocked. |
-| `allowedPayTo` | Backward-compatible alias for `allowedPayees`. |
-| `blockSensitiveMetadata` | Blocks obvious emails, phone numbers, API keys, bearer tokens, private task reasons, wallet-linked notes, personal identifiers, and sensitive query params in x402 metadata. |
-| `blockPaymentIntentChanges` | Blocks request mutation between the 402 challenge and the paid retry. |
-| `requirePaymentResponseHeader` | Requires a `PAYMENT-RESPONSE` or `X-PAYMENT-RESPONSE` header after payment. |
-| `failOnPaidStatusCodes` | Treats configured paid response status codes as failed paid-but-denied flows. Defaults to `401` and `403`. |
-| `requireApprovalAboveUsd` | Calls `onApprovalRequired` for payments above this amount. |
-| `duplicateWindowMs` | Blocks repeated payments to the same endpoint, payee, and amount inside the window. |
-| `assetDecimalsByAsset` | Optional override for atomic amount parsing by asset symbol or address. |
-| `defaultAssetDecimals` | Optional fallback decimals for atomic integer amounts. |
-
-## Payment Intent Fingerprints
-
-Safe402 fingerprints the intent around a payment:
-
-- method
-- URL without hash
-- request body summary
-- payee
-- network
-- asset
-- amount
-- resource
-- description
-- MIME type
-
-This helps detect mutated retry bodies and changed payment requirements.
-
-```ts
-import { createPaymentIntentFingerprint } from "safe402";
-
-const fingerprint = createPaymentIntentFingerprint({
-  input: "https://api.example.com/paid-data",
-  init: { method: "POST", body: "task=a" },
-  requirement
-});
-```
-
-## Receipts
-
-Safe402 stores every decision through a receipt store.
-
-```ts
-type Safe402ReceiptStore = {
-  list(): Promise<Safe402Receipt[]>;
-  save(receipt: Safe402Receipt): Promise<void>;
-};
-```
-
-Receipts power:
-
-- daily budget calculation
-- duplicate-payment blocking
-- audit history
-- debugging
-- user-visible payment history
-- payment intent tracing
-
-### Memory Store
-
-```ts
-import { createMemoryReceiptStore } from "safe402";
-
-const receipts = createMemoryReceiptStore();
-```
-
-### JSON File Store
-
-```ts
-import { createJsonFileReceiptStore } from "safe402/node";
-
-const receipts = createJsonFileReceiptStore({
-  path: ".safe402/receipts.json"
-});
-```
-
-### Custom Store
-
-```ts
-const receipts = {
-  async list() {
-    return db.receipts.findMany({ where: { agentId: "research-agent" } });
-  },
-  async save(receipt) {
-    await db.receipts.create({
-      data: {
-        agentId: "research-agent",
-        ...receipt
-      }
-    });
-  }
-};
-```
-
-## MCP Tool Wrapper
-
-Safe402 includes dependency-light MCP-style tool handlers that you can register in your MCP server or agent runtime.
-
-```ts
-import { createMemoryReceiptStore } from "safe402";
-import { createSafe402McpTools } from "safe402/mcp";
-
-const tools = createSafe402McpTools({
-  receipts: createMemoryReceiptStore(),
-  policy: {
-    maxPaymentUsd: 0.1,
-    dailyBudgetUsd: 5,
-    allowedDomains: ["api.example.com"],
-    allowedNetworks: ["base-sepolia"],
-    allowedAssets: ["USDC"]
-  }
-});
-```
-
-Available tools:
-
-| Tool | Purpose |
-| --- | --- |
-| `safe402_check_payment` | Evaluate an x402 payment requirement against policy before paying. |
-| `safe402_pay_resource` | Fetch an x402-protected resource through Safe402 policy checks. |
-| `safe402_get_receipts` | Return payment decisions and receipts from the configured store. |
-| `safe402_get_budget` | Return today's spend and remaining daily budget. |
 
 ## Package Exports
 
 ```ts
 import { createSafe402Fetch } from "safe402";
-import { createPaymentIntentFingerprint } from "safe402";
 import { runProbe } from "safe402/probe";
-import { runAudit, runSafe402Audit } from "safe402/audit";
-import { defaultPolicy, evaluatePayment, loadPolicy } from "safe402/policy";
+import { runAudit, quoteAudit } from "safe402/audit";
+import { createProbeJsonReport, createAuditJsonReport } from "safe402/reports";
+import { MockBillingProvider, X402BillingProvider } from "safe402/billing";
 import { createSafe402McpTools } from "safe402/mcp";
-import { createJsonFileReceiptStore } from "safe402/node";
 ```
 
-Primary SDK exports from `safe402`:
+## Security Disclaimer
 
-- `createSafe402Probe`
-- `runProbe`
-- `createSafe402Audit`
-- `runAudit`
-- `quoteAudit`
-- `quoteProbe`
-- `evaluatePayment`
-- `extractPaymentRequirement`
-- `parseRequirementAmount`
-- `createPaymentIntentFingerprint`
-- `findSensitivePaymentMetadata`
-- `createMemoryReceiptStore`
-- `loadPolicy`
-- `defaultPolicy`
+Safe402 reduces payment-flow risk but does not guarantee a provider is honest, solvent, or safe.
 
-## Examples
+Safe402 does not hold user funds.
 
-- `examples/basic.ts`
-- `examples/mcp-tools.ts`
-- `examples/json-file-receipts.ts`
-- `safe402.config.example.json`
+Safe402 does not make payment unless configured with an x402 billing/payment client.
 
-## Documentation Website
+Probe does not sign or send funds.
 
-The production documentation website lives in `website/`.
+Audit may be unpaid simulation unless configured for sandbox or paid-flow tests.
 
-```bash
-npm --prefix website install
-npm run site:dev
-npm run site:build
-```
+Safe402 cannot protect flows that bypass it and call raw wallet, signing, or paid-fetch code directly.
 
 ## Development
 
 ```bash
 npm install
-npm run check
+npm run build
 npm test
-npm run audit
-npm run demo:agent
-npm pack --dry-run
-npm run site:build
-```
-
-## Publishing to npm
-
-`npm install safe402` works only after the package is published to the public npm registry. Until then, install from GitHub:
-
-```bash
-npm install github:iluyobrainy/safe402
-```
-
-To publish from your machine:
-
-```bash
-npm adduser
-cd C:\Users\LENOVO\Desktop\Safe402
 npm run publish:check
-npm publish
 ```
 
-To publish from GitHub Actions:
-
-1. Create an npm automation token.
-2. Add it to this repo as a secret named `NPM_TOKEN`.
-3. Run the `Publish to npm` workflow manually with `dry_run=false`.
-
-After npm publish succeeds, consumers can install with:
+Manual live probing is opt-in only:
 
 ```bash
-npm install safe402
+SAFE402_LIVE_URL=https://api.example.com/paid SAFE402_LIVE_CONFIRM=1 npm run test:live:manual
 ```
-
-## Production Notes
-
-Safe402 helps test and enforce x402 payment safety, but it cannot protect code paths that bypass Safe402 and call raw payment functions directly.
-
-Safe402 does not:
-
-- create wallets
-- custody funds
-- settle payments
-- guarantee vendor quality
-- guarantee fraud prevention
-- guarantee that a paid API returns useful data
-
-Use Safe402 as the audit and runtime fuse around x402 payment calls, then combine it with your existing wallet security, logging, monitoring, and user approval flows.
 
 ## Positioning
 
-Safe402 makes x402 payments shippable.
-
-x402 handles payment. Safe402 handles whether the flow is safe enough to ship.
+x402 handles payment. Safe402 checks whether the payment request and payment flow are safe enough for your agent to sign.
