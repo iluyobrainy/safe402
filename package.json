@@ -54,6 +54,9 @@
   ],
   "author": "iluyobrainy",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/iluyobrainy/safe402.git"

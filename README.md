@@ -55,6 +55,14 @@ Bring your existing wallet, facilitator, x402 client, or platform. Safe402 wraps
 
 ## Install
 
+Install from GitHub today:
+
+```bash
+npm install github:iluyobrainy/safe402
+```
+
+After the first npm registry publish:
+
 ```bash
 npm install safe402
 ```
