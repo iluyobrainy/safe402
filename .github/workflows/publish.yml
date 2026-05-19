@@ -14,6 +14,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
 jobs:
   publish:
@@ -32,11 +33,20 @@ jobs:
       - run: npm run publish:check
       - name: Publish dry run
         if: ${{ inputs.dry_run == 'true' }}
-        run: npm publish --dry-run
+        run: |
+          if [ -n "$NODE_AUTH_TOKEN" ]; then
+            npm publish --dry-run
+          else
+            echo "NPM_TOKEN is not configured. Running unauthenticated dry-run."
+            npm publish --dry-run
+          fi
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Publish package
-        if: ${{ inputs.dry_run == 'false' }}
+          NODE_AUTH_TOKEN: ${{ env.NPM_TOKEN }}
+      - name: Publish package with npm token
+        if: ${{ inputs.dry_run == 'false' && env.NPM_TOKEN != '' }}
         run: npm publish --provenance
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ env.NPM_TOKEN }}
+      - name: Publish package with trusted publishing
+        if: ${{ inputs.dry_run == 'false' && env.NPM_TOKEN == '' }}
+        run: npm publish --provenance
