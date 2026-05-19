@@ -1,6 +1,7 @@
 import {
   createSafe402Fetch,
   createMemoryReceiptStore,
+  createPaymentIntentFingerprint,
   evaluatePayment,
   extractPaymentRequirement,
   findSensitivePaymentMetadata,
@@ -17,6 +18,7 @@ export type Safe402AuditCheck = {
   name: string;
   status: Safe402AuditStatus;
   reason: string;
+  fix?: string;
   details?: Record<string, unknown>;
 };
 
@@ -92,6 +94,9 @@ export function formatAuditReport(report: Safe402AuditReport): string {
 
   for (const check of report.checks) {
     lines.push(`[${check.status}] ${check.name} - ${check.reason}`);
+    if (check.fix && check.status !== "pass") {
+      lines.push(`  fix: ${check.fix}`);
+    }
   }
 
   return lines.join("\n");
@@ -144,6 +149,11 @@ async function runBuiltInPolicyChecks(): Promise<Safe402AuditCheck[]> {
   checks.push(await expectDuplicateBlock());
   checks.push(await expectSensitiveMetadataBlock());
   checks.push(await expectRetryFuseBlock());
+  checks.push(await expectChangedRecipientBlock());
+  checks.push(await expectMutatedRetryBlock());
+  checks.push(await expectMissingPaymentResponseHeaderBlock());
+  checks.push(await expectPaidButDeniedBlock());
+  checks.push(expectPaymentIntentFingerprint());
 
   return checks;
 }
@@ -168,7 +178,8 @@ async function auditEndpoint(endpoint: string, policy: Safe402Policy, fetchImpl:
       return [{
         name: `endpoint preflight ${endpoint}`,
         status: "warn",
-        reason: `Expected 402 Payment Required, got ${response.status}.`
+        reason: `Expected 402 Payment Required, got ${response.status}.`,
+        fix: "Point --url at an x402-protected resource that returns a 402 challenge before payment."
       }];
     }
 
@@ -188,13 +199,17 @@ async function auditEndpoint(endpoint: string, policy: Safe402Policy, fetchImpl:
       status: privacyFindings.length === 0 ? "pass" : "warn",
       reason: privacyFindings.length === 0
         ? "No obvious sensitive metadata found in payment requirement."
-        : `Sensitive metadata may be present: ${privacyFindings.map(finding => finding.type).join(", ")}.`
+        : `Sensitive metadata may be present: ${privacyFindings.map(finding => finding.type).join(", ")}.`,
+      fix: privacyFindings.length === 0
+        ? undefined
+        : "Remove private user/task data from resource URLs, descriptions, and reason strings before returning the payment requirement."
     });
   } catch (error) {
     checks.push({
       name: `endpoint preflight ${endpoint}`,
       status: "fail",
-      reason: error instanceof Error ? error.message : "Endpoint audit failed."
+      reason: error instanceof Error ? error.message : "Endpoint audit failed.",
+      fix: "Check the endpoint URL, local server, network, and whether the endpoint returns a valid x402 challenge."
     });
   }
 
@@ -222,6 +237,7 @@ async function expectDecision(input: {
       name: input.name,
       status: "pass",
       reason: decision.reason,
+      fix: undefined,
       details: { decision: decision.status }
     };
   }
@@ -230,6 +246,7 @@ async function expectDecision(input: {
     name: input.name,
     status: input.allowWarning ? "warn" : "fail",
     reason: `Expected ${input.expect}, got ${decision.status}: ${decision.reason}`,
+    fix: "Update policy, payment requirement fields, or the expected audit case outcome so unsafe payments are blocked and safe payments pass.",
     details: { decision: decision.status }
   };
 }
@@ -314,6 +331,7 @@ async function expectRetryFuseBlock(): Promise<Safe402AuditCheck> {
         name: "stops paid 402 retry loops",
         status: "pass",
         reason: error.decision.reason,
+        fix: undefined,
         details: { decision: error.decision.status }
       };
     }
@@ -321,14 +339,187 @@ async function expectRetryFuseBlock(): Promise<Safe402AuditCheck> {
     return {
       name: "stops paid 402 retry loops",
       status: "fail",
-      reason: "Retry fuse threw an unexpected error shape."
+      reason: "Retry fuse threw an unexpected error shape.",
+      fix: "Ensure repeated 402 responses after paid fetch are converted into Safe402Error failures."
     };
   }
 
   return {
     name: "stops paid 402 retry loops",
     status: "fail",
-    reason: "Retry fuse did not stop a repeated 402 response."
+    reason: "Retry fuse did not stop a repeated 402 response.",
+    fix: "Stop after a second 402 instead of allowing automatic paid retries to loop."
+  };
+}
+
+async function expectChangedRecipientBlock(): Promise<Safe402AuditCheck> {
+  return expectDecision({
+    name: "blocks changed recipient address",
+    url: "https://api.safe402.test/paid",
+    requirement: requirement({
+      maxAmountRequired: "0.01",
+      payTo: "0x1111111111111111111111111111111111111111"
+    }),
+    policy: {
+      ...AUDIT_POLICY,
+      allowedPayTo: [DEMO_PAY_TO]
+    },
+    expect: "denied"
+  });
+}
+
+async function expectMutatedRetryBlock(): Promise<Safe402AuditCheck> {
+  const init: RequestInit = {
+    method: "POST",
+    body: "stable-body"
+  };
+  const safeFetch = createSafe402Fetch({
+    fetch: async () => new Response(JSON.stringify({
+      accepts: [requirement({ maxAmountRequired: "0.075" })]
+    }), { status: 402 }),
+    paidFetch: async () => new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "PAYMENT-RESPONSE": "demo" }
+    }),
+    policy: {
+      ...AUDIT_POLICY,
+      blockPaymentIntentChanges: true
+    },
+    onApprovalRequired: async () => {
+      init.body = "mutated-body";
+      return true;
+    }
+  });
+
+  try {
+    await safeFetch("https://api.safe402.test/paid", init);
+  } catch (error) {
+    if (error instanceof Safe402Error && error.decision.status === "failed") {
+      return {
+        name: "blocks mutated retry body",
+        status: "pass",
+        reason: error.decision.reason,
+        details: { decision: error.decision.status }
+      };
+    }
+
+    return {
+      name: "blocks mutated retry body",
+      status: "fail",
+      reason: "Mutated retry test threw an unexpected error shape.",
+      fix: "Compare request intent before the 402 challenge and before paid retry."
+    };
+  }
+
+  return {
+    name: "blocks mutated retry body",
+    status: "fail",
+    reason: "Mutated retry body was not blocked.",
+    fix: "Fingerprint method, URL, and body before retrying paid fetch."
+  };
+}
+
+async function expectMissingPaymentResponseHeaderBlock(): Promise<Safe402AuditCheck> {
+  const safeFetch = createSafe402Fetch({
+    fetch: async () => new Response(JSON.stringify({
+      accepts: [requirement({ maxAmountRequired: "0.01" })]
+    }), { status: 402 }),
+    paidFetch: async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    policy: {
+      ...AUDIT_POLICY,
+      requirePaymentResponseHeader: true
+    }
+  });
+
+  try {
+    await safeFetch("https://api.safe402.test/paid");
+  } catch (error) {
+    if (error instanceof Safe402Error && error.decision.status === "failed") {
+      return {
+        name: "blocks missing PAYMENT-RESPONSE header",
+        status: "pass",
+        reason: error.decision.reason,
+        details: { decision: error.decision.status }
+      };
+    }
+
+    return {
+      name: "blocks missing PAYMENT-RESPONSE header",
+      status: "fail",
+      reason: "Missing header test threw an unexpected error shape.",
+      fix: "Require paid responses to include PAYMENT-RESPONSE when policy demands receipt proof."
+    };
+  }
+
+  return {
+    name: "blocks missing PAYMENT-RESPONSE header",
+    status: "fail",
+    reason: "Paid response without PAYMENT-RESPONSE was not blocked.",
+    fix: "Check the paid response for PAYMENT-RESPONSE or X-PAYMENT-RESPONSE before marking the flow paid."
+  };
+}
+
+async function expectPaidButDeniedBlock(): Promise<Safe402AuditCheck> {
+  const safeFetch = createSafe402Fetch({
+    fetch: async () => new Response(JSON.stringify({
+      accepts: [requirement({ maxAmountRequired: "0.01" })]
+    }), { status: 402 }),
+    paidFetch: async () => new Response(JSON.stringify({ error: "forbidden" }), {
+      status: 403,
+      headers: { "PAYMENT-RESPONSE": "demo" }
+    }),
+    policy: AUDIT_POLICY
+  });
+
+  try {
+    await safeFetch("https://api.safe402.test/paid");
+  } catch (error) {
+    if (error instanceof Safe402Error && error.decision.status === "failed") {
+      return {
+        name: "blocks paid-but-denied responses",
+        status: "pass",
+        reason: error.decision.reason,
+        details: { decision: error.decision.status }
+      };
+    }
+
+    return {
+      name: "blocks paid-but-denied responses",
+      status: "fail",
+      reason: "Paid-but-denied test threw an unexpected error shape.",
+      fix: "Treat configured denial status codes after payment as failed flows."
+    };
+  }
+
+  return {
+    name: "blocks paid-but-denied responses",
+    status: "fail",
+    reason: "403 paid response was not blocked.",
+    fix: "Fail paid responses that still deny access after payment."
+  };
+}
+
+function expectPaymentIntentFingerprint(): Safe402AuditCheck {
+  const first = createPaymentIntentFingerprint({
+    input: "https://api.safe402.test/paid",
+    init: { method: "POST", body: "task=a" },
+    requirement: requirement({ maxAmountRequired: "0.01" })
+  });
+  const second = createPaymentIntentFingerprint({
+    input: "https://api.safe402.test/paid",
+    init: { method: "POST", body: "task=b" },
+    requirement: requirement({ maxAmountRequired: "0.01" })
+  });
+
+  return {
+    name: "fingerprints payment intent",
+    status: first !== second ? "pass" : "fail",
+    reason: first !== second
+      ? "Different request bodies produce different payment intent fingerprints."
+      : "Different request bodies produced the same payment intent fingerprint.",
+    fix: first !== second
+      ? undefined
+      : "Include method, URL, body summary, payee, asset, amount, and resource in the intent fingerprint."
   };
 }
 

@@ -5,7 +5,10 @@
     "allowedDomains": ["api.example.com"],
     "allowedNetworks": ["base", "base-sepolia"],
     "allowedAssets": ["USDC"],
+    "allowedPayTo": ["0x0000000000000000000000000000000000000000"],
     "blockSensitiveMetadata": true,
+    "blockPaymentIntentChanges": true,
+    "requirePaymentResponseHeader": true,
     "requireApprovalAboveUsd": 1,
     "duplicateWindowMs": 1800000
   },

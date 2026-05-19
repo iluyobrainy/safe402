@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { execFile } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { promisify } from "node:util";
 import {
   Safe402Error,
   createMemoryReceiptStore,
+  createPaymentIntentFingerprint,
   createSafe402Fetch,
   evaluatePayment,
   findSensitivePaymentMetadata,
@@ -14,6 +17,8 @@ import {
 import { runSafe402Audit } from "../dist/audit.js";
 import { createSafe402McpTools } from "../dist/mcp.js";
 import { createJsonFileReceiptStore } from "../dist/node.js";
+
+const execFileAsync = promisify(execFile);
 
 const requirement = {
   scheme: "exact",
@@ -97,12 +102,88 @@ test("safeFetch stops a repeated 402 after paid fetch", async () => {
   );
 });
 
+test("safeFetch blocks changed request intent before paid retry", async () => {
+  const init = {
+    method: "POST",
+    body: "stable-body"
+  };
+  const safeFetch = createSafe402Fetch({
+    fetch: async () => new Response(JSON.stringify({ accepts: [{ ...requirement, maxAmountRequired: "75000" }] }), { status: 402 }),
+    paidFetch: async () => new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "PAYMENT-RESPONSE": "demo" }
+    }),
+    policy: {
+      maxPaymentUsd: 0.1,
+      requireApprovalAboveUsd: 0.05
+    },
+    onApprovalRequired: async () => {
+      init.body = "mutated-body";
+      return true;
+    }
+  });
+
+  await assert.rejects(
+    safeFetch("https://api.example.com/paid-data", init),
+    error => error instanceof Safe402Error && /Request intent changed/.test(error.decision.reason)
+  );
+});
+
+test("safeFetch can require PAYMENT-RESPONSE header", async () => {
+  const safeFetch = createSafe402Fetch({
+    fetch: async () => new Response(JSON.stringify({ accepts: [requirement] }), { status: 402 }),
+    paidFetch: async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    policy: {
+      maxPaymentUsd: 0.1,
+      requirePaymentResponseHeader: true
+    }
+  });
+
+  await assert.rejects(
+    safeFetch("https://api.example.com/paid-data"),
+    error => error instanceof Safe402Error && /missing PAYMENT-RESPONSE/.test(error.decision.reason)
+  );
+});
+
+test("safeFetch fails paid-but-denied responses", async () => {
+  const safeFetch = createSafe402Fetch({
+    fetch: async () => new Response(JSON.stringify({ accepts: [requirement] }), { status: 402 }),
+    paidFetch: async () => new Response(JSON.stringify({ error: "forbidden" }), {
+      status: 403,
+      headers: { "PAYMENT-RESPONSE": "demo" }
+    }),
+    policy: {
+      maxPaymentUsd: 0.1
+    }
+  });
+
+  await assert.rejects(
+    safeFetch("https://api.example.com/paid-data"),
+    error => error instanceof Safe402Error && /paid-but-denied/.test(error.decision.reason)
+  );
+});
+
+test("payment intent fingerprint changes when request body changes", () => {
+  const first = createPaymentIntentFingerprint({
+    input: "https://api.example.com/paid-data",
+    init: { method: "POST", body: "task=a" },
+    requirement
+  });
+  const second = createPaymentIntentFingerprint({
+    input: "https://api.example.com/paid-data",
+    init: { method: "POST", body: "task=b" },
+    requirement
+  });
+
+  assert.notEqual(first, second);
+});
+
 test("audit passes built-in checks", async () => {
   const report = await runSafe402Audit();
 
   assert.equal(report.summary.failed, 0);
   assert.equal(report.summary.warnings, 0);
-  assert.ok(report.summary.passed >= 9);
+  assert.ok(report.summary.passed >= 14);
 });
 
 test("MCP tools expose check, receipts, and budget handlers", async () => {
@@ -149,4 +230,18 @@ test("JSON file receipt store persists receipts", async () => {
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test("CLI help exits successfully", async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["dist/cli.js", "--help"]);
+
+  assert.match(stdout, /safe402 audit/);
+});
+
+test("CLI audit JSON output is machine-readable", async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["dist/cli.js", "audit", "--json"]);
+  const report = JSON.parse(stdout);
+
+  assert.equal(report.summary.failed, 0);
+  assert.ok(report.summary.passed >= 14);
 });

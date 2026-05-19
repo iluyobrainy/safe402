@@ -11,6 +11,7 @@ const safeFetch = createSafe402Fetch({
   policy: {
     maxPaymentUsd: 0.1,
     dailyBudgetUsd: 5,
+    blockPaymentIntentChanges: true,
     duplicateWindowMs: 30 * 60 * 1000
   }
 });

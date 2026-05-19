@@ -11,6 +11,7 @@ export const safe402Tools = createSafe402McpTools({
     allowedDomains: ["api.example.com"],
     allowedNetworks: ["base-sepolia"],
     allowedAssets: ["USDC"],
+    allowedPayTo: ["0x0000000000000000000000000000000000000000"],
     blockSensitiveMetadata: true
   }
 });

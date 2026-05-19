@@ -28,9 +28,13 @@ export type Safe402Policy = {
   blockedDomains?: string[];
   allowedNetworks?: string[];
   allowedAssets?: string[];
+  allowedPayTo?: string[];
   assetDecimalsByAsset?: Record<string, number>;
   defaultAssetDecimals?: number;
   blockSensitiveMetadata?: boolean;
+  blockPaymentIntentChanges?: boolean;
+  requirePaymentResponseHeader?: boolean;
+  failOnPaidStatusCodes?: number[];
   requireApprovalAboveUsd?: number;
   duplicateWindowMs?: number;
 };
@@ -42,6 +46,7 @@ export type Safe402Decision = {
   domain: string;
   amountUsd: number;
   requirement?: Safe402PaymentRequirement;
+  paymentIntent?: string;
   duplicateKey?: string;
   timestamp: string;
 };
@@ -66,6 +71,7 @@ export type Safe402FetchConfig = {
 };
 
 const DEFAULT_DUPLICATE_WINDOW_MS = 30 * 60 * 1000;
+const DEFAULT_PAID_DENIAL_STATUS_CODES = [401, 403];
 const KNOWN_ASSET_DECIMALS: Record<string, number> = {
   usdc: 6,
   "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": 6,
@@ -101,6 +107,8 @@ export function createSafe402Fetch(config: Safe402FetchConfig): typeof fetch {
 
   return async (input, init) => {
     const url = toUrl(input);
+    const policy = config.policy ?? {};
+    const requestIntentBeforeChallenge = createRequestIntentFingerprint(input, init);
     const firstResponse = await rawFetch(input, init);
 
     if (firstResponse.status !== 402) {
@@ -116,11 +124,13 @@ export function createSafe402Fetch(config: Safe402FetchConfig): typeof fetch {
     }
 
     const requirement = await extractPaymentRequirement(firstResponse);
+    const paymentIntent = createPaymentIntentFingerprint({ input, init, requirement });
     const decision = await evaluatePayment({
       url,
       requirement,
-      policy: config.policy ?? {},
-      receipts
+      policy,
+      receipts,
+      paymentIntent
     });
 
     if (decision.status === "approval_required") {
@@ -133,6 +143,18 @@ export function createSafe402Fetch(config: Safe402FetchConfig): typeof fetch {
     } else if (decision.status === "denied") {
       await record(receipts, config, decision);
       throw new Safe402Error(decision);
+    }
+
+    const requestIntentBeforePayment = createRequestIntentFingerprint(input, init);
+    if (policy.blockPaymentIntentChanges !== false && requestIntentBeforeChallenge !== requestIntentBeforePayment) {
+      const failedDecision: Safe402Decision = {
+        ...decision,
+        status: "failed",
+        reason: "Request intent changed between the 402 challenge and paid retry.",
+        timestamp: new Date().toISOString()
+      };
+      await record(receipts, config, failedDecision);
+      throw new Safe402Error(failedDecision);
     }
 
     let paidResponse: Response;
@@ -160,6 +182,30 @@ export function createSafe402Fetch(config: Safe402FetchConfig): typeof fetch {
       throw new Safe402Error(failedDecision);
     }
 
+    const paymentResponse = getPaymentResponseHeader(paidResponse);
+    if (policy.requirePaymentResponseHeader && !paymentResponse) {
+      const failedDecision: Safe402Decision = {
+        ...decision,
+        status: "failed",
+        reason: "Paid response is missing PAYMENT-RESPONSE header.",
+        timestamp: new Date().toISOString()
+      };
+      await record(receipts, config, failedDecision, paidResponse);
+      throw new Safe402Error(failedDecision);
+    }
+
+    const paidDenialCodes = policy.failOnPaidStatusCodes ?? DEFAULT_PAID_DENIAL_STATUS_CODES;
+    if (paidDenialCodes.includes(paidResponse.status)) {
+      const failedDecision: Safe402Decision = {
+        ...decision,
+        status: "failed",
+        reason: `Paid response returned ${paidResponse.status}; possible paid-but-denied flow.`,
+        timestamp: new Date().toISOString()
+      };
+      await record(receipts, config, failedDecision, paidResponse);
+      throw new Safe402Error(failedDecision);
+    }
+
     const paidDecision: Safe402Decision = {
       ...decision,
       status: "paid",
@@ -177,8 +223,9 @@ export async function evaluatePayment(input: {
   requirement: Safe402PaymentRequirement;
   policy: Safe402Policy;
   receipts: Safe402ReceiptStore;
+  paymentIntent?: string;
 }): Promise<Safe402Decision> {
-  const { url, requirement, policy, receipts } = input;
+  const { url, requirement, policy, receipts, paymentIntent } = input;
   const parsedAmount = parseRequirementAmount(requirement, policy);
   const amountUsd = parsedAmount.amountUsd;
   const domain = url.hostname.toLowerCase();
@@ -190,6 +237,7 @@ export async function evaluatePayment(input: {
     domain,
     amountUsd,
     requirement,
+    paymentIntent,
     duplicateKey,
     timestamp
   };
@@ -223,6 +271,10 @@ export async function evaluatePayment(input: {
     return { ...baseDecision, status: "denied", reason: `Asset ${requirement.asset} is not allowed.` };
   }
 
+  if (policy.allowedPayTo?.length && requirement.payTo && !includesNormalized(policy.allowedPayTo, requirement.payTo)) {
+    return { ...baseDecision, status: "denied", reason: `Payee ${requirement.payTo} is not allowed.` };
+  }
+
   if (policy.maxPaymentUsd !== undefined && amountUsd > policy.maxPaymentUsd) {
     return { ...baseDecision, status: "denied", reason: `Payment ${amountUsd} exceeds per-call limit ${policy.maxPaymentUsd}.` };
   }
@@ -254,6 +306,25 @@ export async function evaluatePayment(input: {
   }
 
   return { ...baseDecision, status: "approved", reason: "Payment passed Safe402 policy." };
+}
+
+export type Safe402PaymentIntentInput = {
+  input: Parameters<typeof fetch>[0];
+  init?: Parameters<typeof fetch>[1];
+  requirement?: Safe402PaymentRequirement;
+};
+
+export function createPaymentIntentFingerprint(input: Safe402PaymentIntentInput): string {
+  const url = toUrl(input.input);
+  const method = getRequestMethod(input.input, input.init);
+  const body = summarizeRequestBody(input.input, input.init);
+
+  return stableHash({
+    method,
+    url: normalizeUrl(url),
+    body,
+    requirement: normalizeRequirementForIntent(input.requirement)
+  });
 }
 
 export async function extractPaymentRequirement(response: Response): Promise<Safe402PaymentRequirement> {
@@ -372,6 +443,15 @@ function createDuplicateKey(url: URL, requirement: Safe402PaymentRequirement): s
   ].join("|");
 }
 
+function createRequestIntentFingerprint(input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]): string {
+  const url = toUrl(input);
+  return stableHash({
+    method: getRequestMethod(input, init),
+    url: normalizeUrl(url),
+    body: summarizeRequestBody(input, init)
+  });
+}
+
 function parsePaymentRequirementHeader(header: string | null): Safe402PaymentRequirement | undefined {
   if (!header) {
     return undefined;
@@ -442,11 +522,15 @@ async function record(
   const receipt: Safe402Receipt = {
     ...decision,
     responseStatus: response?.status,
-    paymentResponse: response?.headers.get("PAYMENT-RESPONSE") ?? response?.headers.get("X-PAYMENT-RESPONSE") ?? null
+    paymentResponse: response ? getPaymentResponseHeader(response) : null
   };
 
   await receipts.save(receipt);
   await config.onDecision?.(decision);
+}
+
+function getPaymentResponseHeader(response: Response): string | null {
+  return response.headers.get("PAYMENT-RESPONSE") ?? response.headers.get("X-PAYMENT-RESPONSE") ?? null;
 }
 
 function toUrl(input: Parameters<typeof fetch>[0]): URL {
@@ -459,6 +543,119 @@ function toUrl(input: Parameters<typeof fetch>[0]): URL {
   }
 
   return new URL(input.url);
+}
+
+function getRequestMethod(input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]): string {
+  if (init?.method) {
+    return init.method.toUpperCase();
+  }
+
+  if (typeof input === "object" && !(input instanceof URL) && "method" in input && typeof input.method === "string") {
+    return input.method.toUpperCase();
+  }
+
+  return "GET";
+}
+
+function summarizeRequestBody(input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]): unknown {
+  if (init?.body !== undefined && init.body !== null) {
+    return summarizeBodyValue(init.body);
+  }
+
+  if (typeof input === "object" && !(input instanceof URL) && "body" in input) {
+    return "[request-body-unread]";
+  }
+
+  return null;
+}
+
+function summarizeBodyValue(body: BodyInit): unknown {
+  if (typeof body === "string") {
+    return body;
+  }
+
+  if (body instanceof URLSearchParams) {
+    return body.toString();
+  }
+
+  if (body instanceof Blob) {
+    return {
+      type: "blob",
+      size: body.size,
+      mimeType: body.type
+    };
+  }
+
+  if (body instanceof FormData) {
+    return {
+      type: "form-data",
+      fields: Array.from(body.keys()).sort()
+    };
+  }
+
+  if (body instanceof ArrayBuffer) {
+    return {
+      type: "array-buffer",
+      byteLength: body.byteLength
+    };
+  }
+
+  if (ArrayBuffer.isView(body)) {
+    return {
+      type: "array-buffer-view",
+      byteLength: body.byteLength
+    };
+  }
+
+  return `[${Object.prototype.toString.call(body)}]`;
+}
+
+function normalizeUrl(url: URL): string {
+  const normalized = new URL(url.href);
+  normalized.hash = "";
+  return normalized.href;
+}
+
+function normalizeRequirementForIntent(requirement: Safe402PaymentRequirement | undefined): Record<string, unknown> | undefined {
+  if (!requirement) {
+    return undefined;
+  }
+
+  return {
+    scheme: requirement.scheme,
+    network: requirement.network,
+    asset: requirement.asset,
+    payTo: requirement.payTo,
+    maxAmountRequired: requirement.maxAmountRequired,
+    amount: requirement.amount,
+    resource: requirement.resource,
+    description: requirement.description,
+    mimeType: requirement.mimeType
+  };
+}
+
+function stableHash(value: unknown): string {
+  const input = stableStringify(value);
+  let hash = 2166136261;
+
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return `fnv1a:${(hash >>> 0).toString(16).padStart(8, "0")}`;
+}
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(item => stableStringify(item)).join(",")}]`;
+  }
+
+  if (isRecord(value)) {
+    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(",")}}`;
+  }
+
+  return JSON.stringify(value);
 }
 
 function isToday(timestamp: string): boolean {

@@ -35,6 +35,9 @@ const safeFetch = createSafe402Fetch({
     dailyBudgetUsd: 5,
     allowedDomains: ["api.example.com"],
     allowedNetworks: ["base-sepolia"],
+    allowedPayTo: ["0x0000000000000000000000000000000000000000"],
+    blockPaymentIntentChanges: true,
+    requirePaymentResponseHeader: true,
     duplicateWindowMs: 30 * 60 * 1000
   }
 });

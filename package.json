@@ -1,7 +1,7 @@
 {
   "name": "safe402",
   "version": "0.1.0",
-  "description": "A spending firewall for agents that pay x402 endpoints.",
+  "description": "Preflight audit and runtime safety kit for x402 agent payments.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -24,7 +24,7 @@
     }
   },
   "bin": {
-    "safe402": "./dist/cli.js"
+    "safe402": "dist/cli.js"
   },
   "files": [
     "dist",
@@ -75,5 +75,12 @@
     "@x402/fetch": {
       "optional": true
     }
+  },
+  "directories": {
+    "example": "examples",
+    "test": "tests"
+  },
+  "dependencies": {
+    "undici-types": "^7.16.0"
   }
 }

@@ -15,7 +15,7 @@ import {
   TerminalWindow,
   Warning
 } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type NavItem = {
   id: string;
@@ -33,7 +33,7 @@ type CommandScenario = {
 const navItems: NavItem[] = [
   { id: "overview", label: "Overview" },
   { id: "audit", label: "Audit CLI" },
-  { id: "sdk", label: "SDK" },
+  { id: "sdk", label: "Runtime fuse" },
   { id: "mcp", label: "MCP wrapper" },
   { id: "policy", label: "Policy" },
   { id: "receipts", label: "Receipts" },
@@ -47,12 +47,15 @@ const commandScenarios: CommandScenario[] = [
     command: "npx safe402 audit",
     output: [
       "Safe402 audit",
-      "Checks: 9 passed, 0 failed, 0 warnings",
-      "[pass] blocks payment above per-call limit",
+      "Checks: 14 passed, 0 failed, 0 warnings",
+      "[pass] blocks changed recipient address",
+      "[pass] blocks mutated retry body",
+      "[pass] blocks missing PAYMENT-RESPONSE header",
+      "[pass] blocks paid-but-denied responses",
       "[pass] blocks duplicate payment replay",
-      "[pass] stops paid 402 retry loops"
+      "[pass] fingerprints payment intent"
     ],
-    expectation: "Run this before your agent gets a wallet-connected paid fetch."
+    expectation: "Run this before any x402 agent, API, MCP tool, or payment flow goes public."
   },
   {
     id: "sdk",
@@ -63,7 +66,7 @@ const commandScenarios: CommandScenario[] = [
       "import { createSafe402Fetch } from \"safe402\"",
       "const safeFetch = createSafe402Fetch({ paidFetch, policy, receipts })"
     ],
-    expectation: "Replace raw paid fetch calls with a policy-checked fetch wrapper."
+    expectation: "Wrap raw paid fetch calls with a runtime fuse that can fail safely."
   },
   {
     id: "mcp",
@@ -82,9 +85,11 @@ const commandScenarios: CommandScenario[] = [
 const policyRows = [
   ["maxPaymentUsd", "Stops a single call from costing more than the allowed amount."],
   ["dailyBudgetUsd", "Uses receipts to stop the agent from crossing a daily budget."],
-  ["allowedDomains", "Keeps spending limited to known vendors and endpoints."],
+  ["allowedDomains", "Keeps payment flows limited to known vendors and endpoints."],
   ["allowedNetworks", "Blocks chain mismatches before a wallet signs."],
   ["blockSensitiveMetadata", "Catches obvious emails, secrets, phone numbers, and risky query params."],
+  ["blockPaymentIntentChanges", "Stops mutated retry bodies between challenge and payment."],
+  ["requirePaymentResponseHeader", "Requires receipt proof after payment when your policy demands it."],
   ["duplicateWindowMs", "Prevents repeated payments to the same endpoint, payee, and amount."]
 ];
 
@@ -98,7 +103,8 @@ const receiptFields = [
   "duplicateKey",
   "timestamp",
   "responseStatus",
-  "paymentResponse"
+  "paymentResponse",
+  "paymentIntent"
 ];
 
 function App() {
@@ -137,7 +143,7 @@ function TopBanner() {
         </a>
         <div className="hidden items-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-zinc-400 md:flex">
           <Command size={14} />
-          <span>Docs for safe x402 agent payments</span>
+          <span>Docs for shippable x402 agent payments</span>
         </div>
         <a
           href="https://github.com/iluyobrainy/safe402"
@@ -206,14 +212,14 @@ function Hero() {
         <div className="max-w-3xl">
           <div className="inline-flex items-center gap-2 rounded-md border border-emerald-300/20 bg-emerald-300/8 px-3 py-1.5 text-xs text-emerald-100">
             <Circuitry size={14} />
-            Local-first payment safety for x402 agents
+            Preflight and runtime safety for x402 agents
           </div>
           <h1 className="mt-7 max-w-4xl text-4xl font-semibold leading-[1.04] text-zinc-50 md:text-6xl">
-            Let agents pay APIs without giving them a blank check.
+            Safe402 makes x402 payments shippable.
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-8 text-zinc-400 md:text-lg">
-            Safe402 wraps your existing x402 paid fetch with policy checks, receipt memory, duplicate-payment blocking,
-            retry-loop fuses, MCP tool handlers, and a preflight audit CLI.
+            Audit x402 payment flows before launch, then protect production agents with intent fingerprints,
+            retry-loop fuses, metadata checks, receipt validation, and MCP-ready tool handlers.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <a
@@ -247,16 +253,16 @@ function HeroPanel() {
             <span className="size-2 rounded-full bg-emerald-300" />
             <span className="text-xs text-zinc-400">safe402 runtime</span>
           </div>
-          <span className="rounded bg-white/5 px-2 py-1 text-xs text-zinc-500">pre-signing gate</span>
+          <span className="rounded bg-white/5 px-2 py-1 text-xs text-zinc-500">preflight and runtime</span>
         </div>
         <div className="grid gap-3 py-4">
-          <FlowRow icon={<Gauge size={18} />} title="Policy check" detail="amount, domain, network, asset" state="approved" />
-          <FlowRow icon={<Receipt size={18} />} title="Receipt memory" detail="budget and duplicate window" state="recorded" />
-          <FlowRow icon={<ArrowsClockwise size={18} />} title="Retry fuse" detail="second 402 response stopped" state="blocked" />
-          <FlowRow icon={<LockKey size={18} />} title="Metadata guard" detail="secrets and private query params" state="scanned" />
+          <FlowRow icon={<Gauge size={18} />} title="Audit preflight" detail="wrong chain, wrong asset, overprice" state="tested" />
+          <FlowRow icon={<Receipt size={18} />} title="Receipt proof" detail="PAYMENT-RESPONSE required" state="verified" />
+          <FlowRow icon={<ArrowsClockwise size={18} />} title="Runtime fuse" detail="retry loop and mutation stopped" state="blocked" />
+          <FlowRow icon={<LockKey size={18} />} title="Privacy guard" detail="PII and private task data scanned" state="clean" />
         </div>
         <div className="rounded-lg border border-emerald-300/15 bg-emerald-300/8 p-4">
-          <p className="text-sm text-emerald-100">x402 handles payment. Safe402 handles whether the agent should pay.</p>
+          <p className="text-sm text-emerald-100">x402 handles payment. Safe402 handles whether the flow is safe enough to ship.</p>
         </div>
       </div>
     </div>
@@ -308,8 +314,8 @@ function CommandLab() {
     <section id="audit" className="border-b border-white/8 px-4 py-16 md:px-8 md:py-20">
       <SectionHeader
         eyebrow="Interactive command line"
-        title="Type the command, watch the gate, know what to expect."
-        body="Safe402 is designed to be felt from the terminal first. The audit command gives developers an immediate signal before payment code reaches production."
+        title="Type the command, get a launch-readiness report."
+        body="Safe402 is designed to be felt from the terminal first. The audit command tells developers what passed, what failed, why it failed, and how to fix it before payment code reaches production."
       />
       <div className="mt-10 grid gap-6 xl:grid-cols-[0.86fr_1.14fr]">
         <div className="grid content-start gap-3">
@@ -371,8 +377,8 @@ function QuickStart() {
     <section className="border-b border-white/8 px-4 py-16 md:px-8 md:py-20">
       <SectionHeader
         eyebrow="Quick start"
-        title="Add Safe402 where your agent would normally call paid fetch."
-        body="The developer keeps their wallet, x402 client, payment fetch, and storage. Safe402 enforces the rules passed into it."
+        title="Add Safe402 where the agent would normally call paid fetch."
+        body="The developer keeps their wallet, x402 client, payment fetch, and storage. Safe402 audits the dangerous edges and enforces the rules passed into it."
       />
       <div className="mt-10 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <CodePanel
@@ -393,13 +399,16 @@ export const safeFetch = createSafe402Fetch({
     allowedDomains: ["api.example.com"],
     allowedNetworks: ["base-sepolia"],
     allowedAssets: ["USDC"],
-    blockSensitiveMetadata: true
+    allowedPayTo: ["0x0000000000000000000000000000000000000000"],
+    blockSensitiveMetadata: true,
+    blockPaymentIntentChanges: true,
+    requirePaymentResponseHeader: true
   }
 });`}
         />
         <div className="grid gap-4">
-          <InfoBlock icon={<ShieldCheck size={20} />} title="Before payment" body="Read the x402 requirement, parse amount, and decide whether the agent is allowed to pay." />
-          <InfoBlock icon={<Receipt size={20} />} title="After payment" body="Record the decision, response status, payment response header, and duplicate fingerprint." />
+          <InfoBlock icon={<ShieldCheck size={20} />} title="Before payment" body="Read the x402 requirement, parse amount, and decide whether the flow is safe enough to continue." />
+          <InfoBlock icon={<Receipt size={20} />} title="After payment" body="Record the decision, response status, payment response header, and payment intent fingerprint." />
           <InfoBlock icon={<Warning size={20} />} title="When blocked" body="Throw a Safe402Error with an agent-readable reason and no wallet signature." />
         </div>
       </div>
@@ -411,17 +420,18 @@ function HowItWorks() {
   const steps = [
     ["Request", "Agent calls an x402-protected URL through safeFetch."],
     ["Challenge", "The server replies with 402 Payment Required."],
-    ["Decision", "Safe402 checks policy, receipts, amount, network, domain, and metadata."],
+    ["Decision", "Safe402 checks policy, receipts, amount, network, domain, payee, and metadata."],
     ["Payment", "Only approved requests reach the existing x402 paid fetch."],
-    ["Memory", "Safe402 records receipts for budgets, debugging, and replay protection."]
+    ["Verification", "Safe402 checks receipt headers, denial statuses, and repeated 402s after payment."],
+    ["Memory", "Safe402 records receipts and intent fingerprints for debugging and replay protection."]
   ];
 
   return (
     <section className="border-b border-white/8 px-4 py-16 md:px-8 md:py-20">
       <SectionHeader
         eyebrow="Runtime model"
-        title="A small gate between the agent and the wallet."
-        body="Safe402 does not replace x402. It makes x402 payment calls safer to ship by adding policy, memory, and clear failure states around the payment flow."
+        title="A small fuse between the agent and a broken payment flow."
+        body="Safe402 does not replace x402. It makes x402 payment calls safer to ship by adding preflight tests, intent memory, privacy checks, and clear failure states around the payment flow."
       />
       <div className="mt-10 grid gap-3">
         {steps.map(([title, body], index) => (
@@ -443,8 +453,8 @@ function SdkSection() {
     <section id="sdk" className="border-b border-white/8 px-4 py-16 md:px-8 md:py-20">
       <SectionHeader
         eyebrow="SDK"
-        title="The drop-in API is intentionally small."
-        body="Developers should be able to audit, wrap, and explain agent spending without learning a new payment stack."
+        title="The runtime fuse is intentionally small."
+        body="Developers should be able to audit, wrap, and explain x402 payment behavior without adopting a new payment platform."
       />
       <div className="mt-10 grid gap-4 xl:grid-cols-[0.7fr_1.3fr]">
         <div className="rounded-xl border border-white/10 bg-white/[0.025] p-5">
@@ -455,6 +465,7 @@ function SdkSection() {
             <MonoLine text="evaluatePayment" />
             <MonoLine text="extractPaymentRequirement" />
             <MonoLine text="parseRequirementAmount" />
+            <MonoLine text="createPaymentIntentFingerprint" />
             <MonoLine text="findSensitivePaymentMetadata" />
           </div>
         </div>
@@ -528,7 +539,7 @@ function PolicySection() {
       <SectionHeader
         eyebrow="Policy"
         title="Rules stay in the developer's code, config, or database."
-        body="Safe402 is local-first by default. It does not phone home to enforce policy or store receipts."
+        body="Safe402 is local-first by default. It does not phone home to audit flows, enforce policy, or store receipts."
       />
       <div className="mt-10 overflow-hidden rounded-xl border border-white/10">
         {policyRows.map(([field, body]) => (
@@ -547,8 +558,8 @@ function ReceiptsSection() {
     <section id="receipts" className="border-b border-white/8 px-4 py-16 md:px-8 md:py-20">
       <SectionHeader
         eyebrow="Receipts"
-        title="Budget memory needs storage the developer can inspect."
-        body="Receipts are not analytics decoration. Safe402 uses them to calculate spend, block duplicate attempts, debug payment failures, and explain decisions."
+        title="Payment safety needs memory the developer can inspect."
+        body="Receipts are not analytics decoration. Safe402 uses them to calculate spend, block duplicate attempts, trace payment intent, debug payment failures, and explain decisions."
       />
       <div className="mt-10 grid gap-4 xl:grid-cols-[0.92fr_1.08fr]">
         <div className="rounded-xl border border-white/10 bg-white/[0.025] p-5">
@@ -588,12 +599,12 @@ function ProductionSection() {
     <section id="production" className="px-4 py-16 md:px-8 md:py-20">
       <SectionHeader
         eyebrow="Production"
-        title="Ship with tests, audit, and a clear escape hatch."
+        title="Ship with preflight tests, runtime fuses, and clear failure reasons."
         body="Safe402 gives developers a small toolchain they can run locally, in CI, and inside agent runtimes."
       />
       <div className="mt-10 grid gap-4 md:grid-cols-2">
         <InfoBlock icon={<CheckCircle size={20} />} title="CI ready" body="The CLI exits with code 1 on failed audit checks and can run beside typecheck and tests." />
-        <InfoBlock icon={<FileText size={20} />} title="Documented limits" body="Safe402 does not custody funds, create wallets, settle payments, or guarantee vendor quality." />
+        <InfoBlock icon={<FileText size={20} />} title="Documented limits" body="Safe402 does not custody funds, create wallets, settle payments, proxy traffic, or guarantee vendor quality." />
         <InfoBlock icon={<LockKey size={20} />} title="Local-first" body="Policy and receipts stay in the developer's app unless they choose to connect a hosted store." />
         <InfoBlock icon={<ArrowsClockwise size={20} />} title="Runtime fuse" body="Repeated 402 responses after paid fetch are stopped before a silent payment loop forms." />
       </div>

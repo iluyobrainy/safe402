@@ -1,16 +1,57 @@
 # Safe402
 
-Safe402 is a local-first safety layer for agents that pay x402 endpoints.
+Safe402 makes x402 payments shippable.
 
-x402 makes it easy for agents to pay APIs. Safe402 helps developers decide whether the agent should pay before the wallet signs, then records what happened afterward.
+It is a local-first audit and runtime safety kit for developers building x402-powered agents, APIs, MCP tools, and payment flows. It is not a payment proxy, facilitator, hosted spend dashboard, wallet, or marketplace.
 
-Use it as:
+Use Safe402 before launch to test whether an x402 implementation is safe, private, reliable, and production-ready. Use it at runtime as a fuse around paid fetch calls.
 
-- an SDK: `createSafe402Fetch()`
-- a preflight CLI: `npx safe402 audit`
-- an MCP tool wrapper: `createSafe402McpTools()`
+```bash
+npx safe402 audit
+```
 
-Safe402 is not a wallet, facilitator, custody layer, or agent framework. Bring your existing x402 client and wallet. Safe402 adds policy, receipts, duplicate-payment protection, retry-loop fuses, metadata checks, and audit tooling around it.
+```ts
+const safeFetch = createSafe402Fetch({
+  paidFetch,
+  policy,
+  receipts
+});
+```
+
+## What Safe402 Is
+
+Safe402 is the preflight and runtime safety layer for x402 agent payments.
+
+It helps developers catch:
+
+- 402 retry loops
+- duplicate payments
+- wrong chain, asset, domain, or recipient
+- overpricing attacks
+- changed payment intent
+- mutated retry bodies
+- paid-but-denied responses
+- missing `PAYMENT-RESPONSE` headers
+- PII or secrets in payment metadata
+- broken MCP paid-tool flows
+- mismatches between what was paid for and what was delivered
+
+## What Safe402 Is Not
+
+Safe402 does not try to replace x402 infrastructure.
+
+It is not:
+
+- a payment proxy
+- a facilitator
+- a wallet
+- a custody layer
+- a hosted spend dashboard
+- a marketplace
+- an agent framework
+- an x402 platform competitor
+
+Bring your existing wallet, facilitator, x402 client, or platform. Safe402 wraps the dangerous edges around the flow.
 
 ## Install
 
@@ -19,208 +60,6 @@ npm install safe402
 ```
 
 Safe402 expects Node.js 20 or newer for the CLI and Node-specific helpers.
-
-## Quick Start
-
-```ts
-import { createMemoryReceiptStore, createSafe402Fetch } from "safe402";
-import { wrapFetchWithPayment } from "@x402/fetch";
-
-const paidFetch = wrapFetchWithPayment(fetch, x402Client);
-const receipts = createMemoryReceiptStore();
-
-const safeFetch = createSafe402Fetch({
-  fetch,
-  paidFetch,
-  receipts,
-  policy: {
-    maxPaymentUsd: 0.1,
-    dailyBudgetUsd: 5,
-    allowedDomains: ["api.example.com"],
-    allowedNetworks: ["base", "base-sepolia"],
-    allowedAssets: ["USDC"],
-    blockSensitiveMetadata: true,
-    duplicateWindowMs: 30 * 60 * 1000
-  }
-});
-
-const response = await safeFetch("https://api.example.com/paid-data");
-```
-
-## How It Works
-
-1. Your agent calls `safeFetch(url)`.
-2. Safe402 makes the initial unpaid request.
-3. If the response is not `402 Payment Required`, Safe402 returns the response.
-4. If the response is `402`, Safe402 extracts the payment requirement.
-5. Safe402 evaluates the requirement against your policy and receipt history.
-6. If denied, Safe402 throws `Safe402Error` before payment.
-7. If approval is required, Safe402 calls your `onApprovalRequired` callback.
-8. If approved, Safe402 calls your existing x402-aware `paidFetch`.
-9. If the paid fetch returns another `402`, Safe402 stops the loop and records a failed decision.
-10. Safe402 stores a receipt or decision in your configured receipt store.
-
-## What Safe402 Blocks
-
-- payments above your per-call limit
-- spend that would exceed the daily budget
-- endpoints outside your domain allowlist
-- explicitly blocked domains
-- unsupported networks or assets
-- duplicate payment attempts inside a time window
-- paid retry loops where `paidFetch` returns another `402`
-- sensitive metadata in payment requirements, when enabled
-- payments that require human approval but were not approved
-
-## Policy
-
-Policy is plain TypeScript data that you own.
-
-```ts
-const policy = {
-  maxPaymentUsd: 0.1,
-  dailyBudgetUsd: 5,
-  allowedDomains: ["api.example.com"],
-  blockedDomains: ["bad.example.com"],
-  allowedNetworks: ["base", "base-sepolia"],
-  allowedAssets: ["USDC"],
-  blockSensitiveMetadata: true,
-  requireApprovalAboveUsd: 1,
-  duplicateWindowMs: 30 * 60 * 1000
-};
-```
-
-### Policy Fields
-
-| Field | What it does |
-| --- | --- |
-| `maxPaymentUsd` | Maximum allowed payment for a single request. |
-| `dailyBudgetUsd` | Maximum total paid amount per UTC day, calculated from receipts. |
-| `allowedDomains` | Only these domains can be paid. |
-| `blockedDomains` | These domains are always blocked. |
-| `allowedNetworks` | Only these x402 networks can be used. |
-| `allowedAssets` | Only these payment assets can be used. |
-| `blockSensitiveMetadata` | Blocks obvious emails, phone numbers, secrets, and sensitive query params in x402 metadata. |
-| `requireApprovalAboveUsd` | Calls `onApprovalRequired` for payments above this amount. |
-| `duplicateWindowMs` | Blocks repeated payments to the same endpoint/payee/amount inside the window. |
-| `assetDecimalsByAsset` | Optional override for atomic amount parsing by asset symbol or address. |
-| `defaultAssetDecimals` | Optional fallback decimals for atomic integer amounts. |
-
-## Amount Parsing
-
-x402 payment requirements commonly provide `maxAmountRequired` as an atomic token amount. Safe402 recognizes common USDC cases and parses atomic amounts using 6 decimals.
-
-```ts
-// USDC atomic amount
-maxAmountRequired: "10000" // parsed as 0.01 USD
-
-// Decimal amount
-maxAmountRequired: "0.01" // parsed as 0.01 USD
-```
-
-For custom assets, pass `assetDecimalsByAsset` or `defaultAssetDecimals`.
-
-```ts
-policy: {
-  assetDecimalsByAsset: {
-    "MYTOKEN": 18
-  }
-}
-```
-
-## Receipts
-
-Safe402 stores every decision through a receipt store.
-
-```ts
-type Safe402ReceiptStore = {
-  list(): Promise<Safe402Receipt[]>;
-  save(receipt: Safe402Receipt): Promise<void>;
-};
-```
-
-Receipts power:
-
-- daily budget calculation
-- duplicate-payment blocking
-- audit history
-- debugging
-- user-visible payment history
-
-### Memory Store
-
-Use this for tests and demos:
-
-```ts
-import { createMemoryReceiptStore } from "safe402";
-
-const receipts = createMemoryReceiptStore();
-```
-
-### JSON File Store
-
-Use this for local Node agents and CLIs that need receipts to survive restarts:
-
-```ts
-import { createJsonFileReceiptStore } from "safe402/node";
-
-const receipts = createJsonFileReceiptStore({
-  path: ".safe402/receipts.json"
-});
-```
-
-### Custom Store
-
-Use your own database in production:
-
-```ts
-const receipts = {
-  async list() {
-    return db.receipts.findMany({ where: { agentId: "research-agent" } });
-  },
-  async save(receipt) {
-    await db.receipts.create({
-      data: {
-        agentId: "research-agent",
-        ...receipt
-      }
-    });
-  }
-};
-```
-
-## Human Approval
-
-```ts
-const safeFetch = createSafe402Fetch({
-  paidFetch,
-  receipts,
-  policy: {
-    requireApprovalAboveUsd: 1
-  },
-  onApprovalRequired: async decision => {
-    await notifyUser(decision);
-    return await waitForUserApproval(decision);
-  }
-});
-```
-
-If the callback returns `false` or is not provided, Safe402 blocks payment before the wallet signs.
-
-## Handling Denied Payments
-
-```ts
-import { Safe402Error } from "safe402";
-
-try {
-  const response = await safeFetch("https://api.example.com/paid-data");
-} catch (error) {
-  if (error instanceof Safe402Error) {
-    console.log(error.decision.status);
-    console.log(error.decision.reason);
-  }
-}
-```
 
 ## Preflight Audit CLI
 
@@ -234,26 +73,17 @@ Example output:
 
 ```text
 Safe402 audit
-Checks: 9 passed, 0 failed, 0 warnings
+Checks: 14 passed, 0 failed, 0 warnings
 
-[pass] allows a normal x402 payment - Payment passed Safe402 policy.
-[pass] blocks payment above per-call limit - Payment 0.25 exceeds per-call limit 0.1.
-[pass] blocks disallowed payment domain - Domain unknown.safe402.test is not in the allowed domain list.
+[pass] stops paid 402 retry loops - Paid fetch returned another 402; retry fuse stopped to avoid a payment loop.
+[pass] blocks changed recipient address - Payee 0x1111...1111 is not allowed.
+[pass] blocks mutated retry body - Request intent changed between the 402 challenge and paid retry.
+[pass] blocks missing PAYMENT-RESPONSE header - Paid response is missing PAYMENT-RESPONSE header.
+[pass] blocks paid-but-denied responses - Paid response returned 403; possible paid-but-denied flow.
+[pass] fingerprints payment intent - Different request bodies produce different payment intent fingerprints.
 ```
 
-The audit currently checks:
-
-- normal payment approval
-- per-call limit blocking
-- domain allowlist blocking
-- network blocking
-- approval threshold behavior
-- daily budget blocking
-- duplicate payment replay blocking
-- sensitive metadata blocking
-- repeated `402` retry-loop fuse
-
-The command exits with code `1` if any check fails, so it can run in CI.
+The audit prints pass, fail, warning, reason, and fix guidance. It exits with code `1` when checks fail, so it can run in CI.
 
 ### Audit a Live Endpoint
 
@@ -279,7 +109,10 @@ Example config:
     "allowedDomains": ["api.example.com"],
     "allowedNetworks": ["base-sepolia"],
     "allowedAssets": ["USDC"],
-    "blockSensitiveMetadata": true
+    "allowedPayTo": ["0x0000000000000000000000000000000000000000"],
+    "blockSensitiveMetadata": true,
+    "blockPaymentIntentChanges": true,
+    "requirePaymentResponseHeader": true
   },
   "cases": [
     {
@@ -305,9 +138,158 @@ Machine-readable output:
 npx safe402 audit --json
 ```
 
+## Runtime Safety Wrapper
+
+Use `createSafe402Fetch()` where your agent would normally call an x402-aware paid fetch.
+
+```ts
+import { createMemoryReceiptStore, createSafe402Fetch } from "safe402";
+import { wrapFetchWithPayment } from "@x402/fetch";
+
+const paidFetch = wrapFetchWithPayment(fetch, x402Client);
+const receipts = createMemoryReceiptStore();
+
+const safeFetch = createSafe402Fetch({
+  fetch,
+  paidFetch,
+  receipts,
+  policy: {
+    maxPaymentUsd: 0.1,
+    dailyBudgetUsd: 5,
+    allowedDomains: ["api.example.com"],
+    allowedNetworks: ["base-sepolia"],
+    allowedAssets: ["USDC"],
+    allowedPayTo: ["0x0000000000000000000000000000000000000000"],
+    blockSensitiveMetadata: true,
+    blockPaymentIntentChanges: true,
+    requirePaymentResponseHeader: true,
+    duplicateWindowMs: 30 * 60 * 1000
+  }
+});
+
+const response = await safeFetch("https://api.example.com/paid-data");
+```
+
+## Runtime Flow
+
+1. Your agent calls `safeFetch(url)`.
+2. Safe402 records the request intent fingerprint.
+3. Safe402 makes the initial unpaid request.
+4. If the response is not `402 Payment Required`, Safe402 returns it.
+5. If the response is `402`, Safe402 extracts the payment requirement.
+6. Safe402 checks amount, domain, network, asset, payee, metadata, budget, receipts, and duplicate history.
+7. If approval is required, Safe402 calls your `onApprovalRequired` callback.
+8. Before payment, Safe402 checks whether the request intent changed.
+9. If allowed, Safe402 calls your existing x402 `paidFetch`.
+10. Safe402 fails repeated `402`, missing payment receipt headers, and paid-but-denied responses.
+11. Safe402 records the decision and receipt in your configured store.
+
+## Policy Fields
+
+| Field | What it does |
+| --- | --- |
+| `maxPaymentUsd` | Maximum allowed payment for a single request. |
+| `dailyBudgetUsd` | Maximum total paid amount per UTC day, calculated from receipts. |
+| `allowedDomains` | Only these domains can be paid. |
+| `blockedDomains` | These domains are always blocked. |
+| `allowedNetworks` | Only these x402 networks can be used. |
+| `allowedAssets` | Only these payment assets can be used. |
+| `allowedPayTo` | Only these recipient addresses can be paid. |
+| `blockSensitiveMetadata` | Blocks obvious emails, phone numbers, secrets, and sensitive query params in x402 metadata. |
+| `blockPaymentIntentChanges` | Blocks request mutation between the 402 challenge and the paid retry. |
+| `requirePaymentResponseHeader` | Requires a `PAYMENT-RESPONSE` or `X-PAYMENT-RESPONSE` header after payment. |
+| `failOnPaidStatusCodes` | Treats configured paid response status codes as failed paid-but-denied flows. Defaults to `401` and `403`. |
+| `requireApprovalAboveUsd` | Calls `onApprovalRequired` for payments above this amount. |
+| `duplicateWindowMs` | Blocks repeated payments to the same endpoint, payee, and amount inside the window. |
+| `assetDecimalsByAsset` | Optional override for atomic amount parsing by asset symbol or address. |
+| `defaultAssetDecimals` | Optional fallback decimals for atomic integer amounts. |
+
+## Payment Intent Fingerprints
+
+Safe402 fingerprints the intent around a payment:
+
+- method
+- URL without hash
+- request body summary
+- payee
+- network
+- asset
+- amount
+- resource
+- description
+- MIME type
+
+This helps detect mutated retry bodies and changed payment requirements.
+
+```ts
+import { createPaymentIntentFingerprint } from "safe402";
+
+const fingerprint = createPaymentIntentFingerprint({
+  input: "https://api.example.com/paid-data",
+  init: { method: "POST", body: "task=a" },
+  requirement
+});
+```
+
+## Receipts
+
+Safe402 stores every decision through a receipt store.
+
+```ts
+type Safe402ReceiptStore = {
+  list(): Promise<Safe402Receipt[]>;
+  save(receipt: Safe402Receipt): Promise<void>;
+};
+```
+
+Receipts power:
+
+- daily budget calculation
+- duplicate-payment blocking
+- audit history
+- debugging
+- user-visible payment history
+- payment intent tracing
+
+### Memory Store
+
+```ts
+import { createMemoryReceiptStore } from "safe402";
+
+const receipts = createMemoryReceiptStore();
+```
+
+### JSON File Store
+
+```ts
+import { createJsonFileReceiptStore } from "safe402/node";
+
+const receipts = createJsonFileReceiptStore({
+  path: ".safe402/receipts.json"
+});
+```
+
+### Custom Store
+
+```ts
+const receipts = {
+  async list() {
+    return db.receipts.findMany({ where: { agentId: "research-agent" } });
+  },
+  async save(receipt) {
+    await db.receipts.create({
+      data: {
+        agentId: "research-agent",
+        ...receipt
+      }
+    });
+  }
+};
+```
+
 ## MCP Tool Wrapper
 
-Safe402 includes dependency-free MCP-style tool handlers that you can register in your MCP server or agent runtime.
+Safe402 includes dependency-light MCP-style tool handlers that you can register in your MCP server or agent runtime.
 
 ```ts
 import { createMemoryReceiptStore } from "safe402";
@@ -321,18 +303,6 @@ const tools = createSafe402McpTools({
     allowedDomains: ["api.example.com"],
     allowedNetworks: ["base-sepolia"],
     allowedAssets: ["USDC"]
-  }
-});
-
-const decision = await tools.safe402_check_payment.handler({
-  url: "https://api.example.com/paid-data",
-  requirement: {
-    scheme: "exact",
-    network: "base-sepolia",
-    asset: "USDC",
-    payTo: "0x0000000000000000000000000000000000000000",
-    maxAmountRequired: "10000",
-    resource: "https://api.example.com/paid-data"
   }
 });
 ```
@@ -350,6 +320,7 @@ Available tools:
 
 ```ts
 import { createSafe402Fetch } from "safe402";
+import { createPaymentIntentFingerprint } from "safe402";
 import { runSafe402Audit } from "safe402/audit";
 import { createSafe402McpTools } from "safe402/mcp";
 import { createJsonFileReceiptStore } from "safe402/node";
@@ -385,7 +356,7 @@ npm run site:build
 
 ## Production Notes
 
-Safe402 helps enforce payment policy, but it cannot protect code paths that bypass Safe402 and call a raw paid fetch directly.
+Safe402 helps test and enforce x402 payment safety, but it cannot protect code paths that bypass Safe402 and call raw payment functions directly.
 
 Safe402 does not:
 
@@ -396,10 +367,10 @@ Safe402 does not:
 - guarantee fraud prevention
 - guarantee that a paid API returns useful data
 
-Use Safe402 as the guardrail around x402 payment calls, then combine it with your existing wallet security, logging, monitoring, and user approval flows.
+Use Safe402 as the audit and runtime fuse around x402 payment calls, then combine it with your existing wallet security, logging, monitoring, and user approval flows.
 
 ## Positioning
 
-Safe402 is the safety wrapper developers add before an agent spends money.
+Safe402 makes x402 payments shippable.
 
-x402 handles payment. Safe402 handles whether the agent should pay.
+x402 handles payment. Safe402 handles whether the flow is safe enough to ship.

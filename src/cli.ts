@@ -12,14 +12,16 @@ type AuditConfig = {
 const args = process.argv.slice(2);
 const command = args[0];
 
-if (command === "audit") {
+if (!command || command === "--help" || command === "-h") {
+  printHelp();
+} else if (command === "audit") {
   await runAuditCommand(args.slice(1)).catch(error => {
     console.error(error instanceof Error ? error.message : "Safe402 audit failed.");
     process.exitCode = 1;
   });
 } else {
   printHelp();
-  process.exitCode = command ? 1 : 0;
+  process.exitCode = 1;
 }
 
 async function runAuditCommand(args: string[]) {
