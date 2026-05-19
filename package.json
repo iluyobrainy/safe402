@@ -40,6 +40,7 @@
     "audit": "node dist/cli.js audit",
     "demo:agent": "npm run build && node examples/agent-demo.mjs",
     "test": "npm run build && node --test tests/*.test.mjs",
+    "publish:check": "npm run check && npm test && npm run audit && npm pack --dry-run",
     "site:dev": "npm --prefix website run dev",
     "site:build": "npm --prefix website run build",
     "prepare": "npm run build"

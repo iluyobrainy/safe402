@@ -402,6 +402,35 @@ npm pack --dry-run
 npm run site:build
 ```
 
+## Publishing to npm
+
+`npm install safe402` works only after the package is published to the public npm registry. Until then, install from GitHub:
+
+```bash
+npm install github:iluyobrainy/safe402
+```
+
+To publish from your machine:
+
+```bash
+npm adduser
+cd C:\Users\LENOVO\Desktop\Safe402
+npm run publish:check
+npm publish
+```
+
+To publish from GitHub Actions:
+
+1. Create an npm automation token.
+2. Add it to this repo as a secret named `NPM_TOKEN`.
+3. Run the `Publish to npm` workflow manually with `dry_run=false`.
+
+After npm publish succeeds, consumers can install with:
+
+```bash
+npm install safe402
+```
+
 ## Production Notes
 
 Safe402 helps test and enforce x402 payment safety, but it cannot protect code paths that bypass Safe402 and call raw payment functions directly.
