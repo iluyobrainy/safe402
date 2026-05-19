@@ -61,6 +61,12 @@ Install from GitHub today:
 npm install github:iluyobrainy/safe402
 ```
 
+Or, if you want the dependency key to look exactly like `safe402` before the npm registry publish:
+
+```bash
+npm install safe402@github:iluyobrainy/safe402
+```
+
 After the first npm registry publish:
 
 ```bash
