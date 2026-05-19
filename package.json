@@ -28,6 +28,7 @@
   },
   "files": [
     "dist",
+    "examples/agent-demo.mjs",
     "README.md",
     "LICENSE",
     "SECURITY.md",
@@ -37,6 +38,7 @@
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "audit": "node dist/cli.js audit",
+    "demo:agent": "npm run build && node examples/agent-demo.mjs",
     "test": "npm run build && node --test tests/*.test.mjs",
     "site:dev": "npm --prefix website run dev",
     "site:build": "npm --prefix website run build",
@@ -79,8 +81,5 @@
   "directories": {
     "example": "examples",
     "test": "tests"
-  },
-  "dependencies": {
-    "undici-types": "^7.16.0"
   }
 }

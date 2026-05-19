@@ -138,6 +138,45 @@ Machine-readable output:
 npx safe402 audit --json
 ```
 
+## Demo Agent
+
+Safe402 includes a local demo agent that tries both safe and unsafe x402 payment flows.
+
+```bash
+git clone https://github.com/iluyobrainy/safe402.git
+cd safe402
+npm install
+npm run demo:agent
+```
+
+The demo agent simulates:
+
+- a free resource
+- a valid paid resource
+- a duplicate replay
+- an overpriced tool
+- a changed recipient address
+- leaked metadata
+- a repeated `402` retry loop
+- a paid response without `PAYMENT-RESPONSE`
+- a paid-but-denied `403` response
+
+Expected result:
+
+```text
+Safe402 demo agent result
+
+Free resource             allowed
+Good paid resource        paid
+Duplicate replay          blocked
+Overpriced tool           blocked
+Wrong recipient           blocked
+Metadata leak             blocked
+Retry loop                blocked
+Missing receipt header    blocked
+Paid but denied           blocked
+```
+
 ## Runtime Safety Wrapper
 
 Use `createSafe402Fetch()` where your agent would normally call an x402-aware paid fetch.
@@ -350,6 +389,7 @@ npm install
 npm run check
 npm test
 npm run audit
+npm run demo:agent
 npm pack --dry-run
 npm run site:build
 ```
